@@ -4,6 +4,9 @@ import { getToken } from "../utils/auth";
 export default function Home() {
   const navigate = useNavigate();
   const token = getToken();
+  <div className="bg-blue-600 text-white p-6 text-2xl rounded-xl">
+  Tailwind is alive
+  </div>
 
   return (
     <div className="min-h-screen page px-6 pt-16 pb-32 bg-gradient-to-b from-blue-50 to-white">

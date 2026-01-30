@@ -4,76 +4,124 @@ import { useNavigate } from "react-router-dom";
 export default function PlanResult() {
   const navigate = useNavigate();
   const currentUser = JSON.parse(localStorage.getItem("currentUser"));
-  const [plan, setPlan] = useState([]);
+  const [meals, setMeals] = useState([]);
 
+  /* -----------------------------------------
+     Load plan
+  ----------------------------------------- */
   useEffect(() => {
     if (!currentUser) {
       navigate("/login");
       return;
     }
 
-    const stored = localStorage.getItem(`mealplan_${currentUser.email}`);
+    const stored = localStorage.getItem(
+      `mealplan_${currentUser.email}`
+    );
+
     if (stored) {
-      setPlan(JSON.parse(stored));
+      setMeals(JSON.parse(stored));
     }
   }, [currentUser, navigate]);
 
-  if (!plan.length) {
+  /* -----------------------------------------
+     Remove single meal
+  ----------------------------------------- */
+  const removeMeal = (id) => {
+    const updated = meals.filter((m) => m.id !== id);
+    setMeals(updated);
+
+    localStorage.setItem(
+      `mealplan_${currentUser.email}`,
+      JSON.stringify(updated)
+    );
+  };
+
+  /* -----------------------------------------
+     Clear entire plan
+  ----------------------------------------- */
+  const clearPlan = () => {
+    if (!window.confirm("Clear your entire meal plan?")) return;
+
+    setMeals([]);
+    localStorage.removeItem(`mealplan_${currentUser.email}`);
+  };
+
+  /* -----------------------------------------
+     Empty state
+  ----------------------------------------- */
+  if (!meals.length) {
     return (
-      <div className="min-h-screen page flex items-center justify-center bg-gradient-to-b from-blue-50 to-white">
-        <p className="text-gray-500">No meal results found</p>
+      <div className="min-h-screen page flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white px-4 text-center">
+        <h2 className="text-xl font-bold mb-2">
+          No meals in your plan
+        </h2>
+        <p className="text-gray-500 mb-6">
+          Start searching and add meals to build your plan
+        </p>
+
+        <button
+          onClick={() => navigate("/generate")}
+          className="bg-green-600 text-white px-6 py-3 rounded-2xl font-semibold"
+        >
+          Find Meals
+        </button>
       </div>
     );
   }
 
+  /* -----------------------------------------
+     View Plan
+  ----------------------------------------- */
   return (
     <div className="min-h-screen page bg-gradient-to-b from-blue-50 to-white px-4 pt-8 pb-28">
-      <h2 className="text-2xl font-bold mb-1">Meal Results</h2>
+      <div className="flex justify-between items-center mb-2">
+        <h2 className="text-2xl font-bold">Your Meal Plan</h2>
+        <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
+          {meals.length} meals
+        </span>
+      </div>
+
       <p className="text-gray-500 mb-6">
-        Based on your search preferences
+        Meals you’ve added so far
       </p>
 
-      <div className="space-y-6">
-        {plan.map((day) => (
+      <div className="space-y-4">
+        {meals.map((meal) => (
           <div
-            key={day.day}
-            className="bg-white rounded-2xl shadow p-5"
+            key={meal.id}
+            className="bg-white rounded-2xl shadow overflow-hidden"
           >
-            {/* Header */}
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-lg font-bold">
-                Day {day.day}
+            {/* Image */}
+            <div
+              className="h-36 bg-cover bg-center"
+              style={{
+                backgroundImage: `url(${meal.image})`,
+              }}
+            />
+
+            {/* Content */}
+            <div className="p-4">
+              <h3 className="text-lg font-bold mb-1">
+                {meal.title}
               </h3>
-              <span className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full">
-                Suggested
-              </span>
-            </div>
 
-            {/* Focus */}
-            <p className="text-sm text-gray-600 mb-4">
-              🔍 Focus: <b>{day.focus}</b>
-            </p>
+              <p className="text-sm text-gray-500 mb-2">
+                {meal.calories} kcal • {meal.protein}
+              </p>
 
-            {/* Meals */}
-            <div className="space-y-3">
-              {day.meals.map((meal, idx) => (
-                <div
-                  key={idx}
-                  className="bg-gray-50 rounded-xl p-3 text-gray-800"
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-400">
+                  ⏱ {meal.time}
+                </span>
+
+                <button
+                  onClick={() => removeMeal(meal.id)}
+                  className="px-4 py-2 rounded-lg bg-red-50 text-red-600 text-sm font-semibold transition active:scale-95"
                 >
-                  {meal}
-                </div>
-              ))}
-            </div>
-
-            {/* Actions */}
-            <div className="mt-5 flex gap-3">
-              <button className="flex-1 bg-blue-50 text-blue-600 py-2 rounded-xl text-sm">
-                Swap
-              </button>
-              <button className="flex-1 bg-red-50 text-red-500 py-2 rounded-xl text-sm">
-                Remove
-              </button>
+                  Remove
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -83,9 +131,16 @@ export default function PlanResult() {
       <div className="mt-10 space-y-4">
         <button
           onClick={() => navigate("/generate")}
-          className="w-full bg-green-600 text-white py-4 rounded-2xl text-lg shadow-lg"
+          className="w-full bg-green-600 text-white py-4 rounded-2xl text-lg font-bold shadow-lg"
         >
-          Search Again
+          Add More Meals
+        </button>
+
+        <button
+          onClick={clearPlan}
+          className="w-full bg-red-100 text-red-600 py-3 rounded-xl font-semibold"
+        >
+          Clear Plan
         </button>
 
         <button

@@ -14,7 +14,6 @@ export default function Navbar() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-md z-50">
       <div className="flex justify-around items-center py-3 text-sm">
-
         {/* Home */}
         <Link
           to="/"
@@ -43,11 +42,21 @@ export default function Navbar() {
               <span className="text-xl">🔍</span>
               Search
             </Link>
+
+            {/* ✅ View Plan (NEW) */}
+            <Link
+              to="/plan"
+              className={`flex flex-col items-center transition transform active:scale-95 ${isActive("/plan")}`}
+            >
+              <span className="text-xl">📋</span>
+              Plan
+            </Link>
           </>
         )}
 
         {!token ? (
           <>
+            {/* Login */}
             <Link
               to="/login"
               className={`flex flex-col items-center transition transform active:scale-95 ${isActive("/login")}`}
@@ -56,6 +65,7 @@ export default function Navbar() {
               Login
             </Link>
 
+            {/* Signup */}
             <Link
               to="/signup"
               className={`flex flex-col items-center transition transform active:scale-95 ${isActive("/signup")}`}

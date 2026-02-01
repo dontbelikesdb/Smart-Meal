@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from sqlalchemy.orm import relationship
-from .base import Base
+from app.db.session import Base
 
 class Ingredient(Base):
     __tablename__ = "ingredients"
@@ -16,6 +16,7 @@ class Ingredient(Base):
     
     # Relationships
     recipe_ingredients = relationship("RecipeIngredient", back_populates="ingredient")
+    allergy_mappings = relationship("AllergyIngredientMap", back_populates="ingredient")
     
     def __repr__(self):
         return f"<Ingredient {self.name} ({self.id})>"

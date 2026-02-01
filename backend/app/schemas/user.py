@@ -40,6 +40,7 @@ class UserLogin(BaseModel):
 class UserInDBBase(UserBase):
     id: int
     is_active: bool = True
+    is_superuser: bool = False
     created_at: datetime
     updated_at: datetime
 

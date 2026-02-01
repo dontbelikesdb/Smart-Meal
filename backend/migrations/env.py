@@ -7,7 +7,8 @@ from sqlalchemy import pool
 from alembic import context
 
 # Import your models here (you'll need to create this import)
-from app.models.base import Base
+from app.db.session import Base
+from app import models
 from app.core.config import settings
 
 # this is the Alembic Config object, which provides
@@ -22,6 +23,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
+_ = models
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py

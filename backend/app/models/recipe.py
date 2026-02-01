@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text, Enum, Boolean
 from sqlalchemy.orm import relationship
-from .base import Base
+from app.db.session import Base
 import enum
 
 class MealType(enum.Enum):

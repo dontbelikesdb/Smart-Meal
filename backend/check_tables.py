@@ -50,7 +50,7 @@ def check_tables():
                 print(f"Columns: {', '.join(columns)}")
                 
     except Exception as e:
-        print(f"\n❌ Error connecting to the database: {e}")
+        print(f"\n Error connecting to the database: {e}")
         print("\nPlease check:")
         print(f"1. Is PostgreSQL running?")
         print(f"2. Check your DATABASE_URL in .env: {settings.DATABASE_URL}")

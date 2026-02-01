@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum, Boolean
 from sqlalchemy.orm import relationship
-from .base import Base
+from app.db.session import Base
 from .recipe import MealType
 from datetime import date
 

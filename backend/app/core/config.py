@@ -4,7 +4,7 @@ from pathlib import Path
 import os
 
 # Get the absolute path to the .env file
-env_path = Path(__file__).parent.parent.parent / '.env'
+env_path = Path(__file__).parent.parent.parent.parent / '.env'
 
 class Settings(BaseSettings):
     # Project
@@ -26,9 +26,17 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
     
+    # Gemini (LLM)
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+    
     # First superuser
     FIRST_SUPERUSER_EMAIL: str = "admin@example.com"
-    FIRST_SUPERUSER_PASSWORD: str = "changethis"
+    FIRST_SUPERUSER_PASSWORD: str = "Admin123!"
+
+    # Startup seeding
+    SEED_DEFAULT_ALLERGIES: bool = True
+    SEED_DEFAULT_ALLERGIES_AUTOMAP_LIMIT: int = 25
 
     class Config:
         case_sensitive = True

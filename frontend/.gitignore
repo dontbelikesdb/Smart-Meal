@@ -1,0 +1,22 @@
+# Node
+node_modules/
+dist/
+dev-dist/
+
+# Vite
+.vite/
+
+# Env
+.env
+.env.*
+
+# Certificates
+*.pem
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python cache (backend)
+__pycache__/
+*.pyc

@@ -4,6 +4,19 @@ data/raw/*.json
 data/raw/*.xlsx
 data/raw/*.parquet
 
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Build outputs
+dev-dist/
+
+# Secrets / certs
+*.pem
 # Python
 __pycache__/
 *.py[cod]

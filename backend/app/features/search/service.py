@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
@@ -15,9 +16,17 @@ from app.models.user import User
 from .schemas import CalorieBucket, DietType, ParsedQuery, RecipeResult
 
 
+logger = logging.getLogger(__name__)
+
+
 _LOW_MAX = 400.0
 _MEDIUM_MAX = 700.0
 _BMI_LOW_CAL_CUTOFF = 22.9
+
+# Nutrition heuristic thresholds (per serving) used when the user asks for
+# high-protein / low-carb type queries.
+_HIGH_PROTEIN_MIN_G = 20.0
+_LOW_CARB_MAX_G = 30.0
 
 _STOPWORDS: Set[str] = {
     "a",
@@ -48,6 +57,22 @@ _STOPWORDS: Set[str] = {
     "without",
     "option",
     "options",
+}
+
+
+_ALLERGY_QUERY_SYNONYMS: Dict[str, List[str]] = {
+    "milk": [
+        "milk",
+        "dairy",
+        "cheese",
+        "butter",
+        "cream",
+        "yogurt",
+        "paneer",
+        "curd",
+        "ghee",
+    ],
+    "peanut": ["peanut", "peanuts", "peanut butter"],
 }
 
 
@@ -142,16 +167,113 @@ def _fallback_parse(query: str) -> ParsedQuery:
 
 
 def _try_parse_json_from_text(text: str) -> Optional[Dict[str, Any]]:
-    # Try to locate the first JSON object in the text.
-    start = text.find("{")
-    end = text.rfind("}")
+    if not text:
+        return None
+
+    cleaned = text.strip()
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned, flags=re.IGNORECASE | re.DOTALL)
+    if fenced:
+        cleaned = fenced.group(1).strip()
+
+    decoder = json.JSONDecoder()
+
+    for i, ch in enumerate(cleaned):
+        if ch != "{":
+            continue
+        try:
+            obj, _end = decoder.raw_decode(cleaned[i:])
+        except Exception:
+            continue
+        if isinstance(obj, dict):
+            return obj
+
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
     if start == -1 or end == -1 or end <= start:
         return None
-    snippet = text[start : end + 1]
+    snippet = cleaned[start : end + 1]
     try:
-        return json.loads(snippet)
+        obj = json.loads(snippet)
+        return obj if isinstance(obj, dict) else None
     except Exception:
         return None
+
+
+def _coerce_diet(value: Any) -> Optional[DietType]:
+    if value is None:
+        return None
+    s = _normalize_term(str(value))
+    s = s.replace("-", " ")
+    s = re.sub(r"\s+", " ", s).strip()
+    if not s:
+        return None
+    if s in {"veg", "vegetarian", "vegan"}:
+        return DietType.VEG
+    if s in {"non veg", "nonveg", "non vegetarian", "nonvegetarian"}:
+        return DietType.NON_VEG
+    if s.replace(" ", "_") == "non_veg":
+        return DietType.NON_VEG
+    return None
+
+
+def _coerce_calorie_bucket(value: Any) -> Optional[CalorieBucket]:
+    if value is None:
+        return None
+    s = _normalize_term(str(value))
+    s = s.replace("-", " ")
+    s = re.sub(r"\s+", " ", s).strip()
+    if not s:
+        return None
+    if s.startswith("low"):
+        return CalorieBucket.LOW
+    if s.startswith("med") or s.startswith("moderate"):
+        return CalorieBucket.MEDIUM
+    if s.startswith("high"):
+        return CalorieBucket.HIGH
+    if s in {"400-700", "400 to 700", "mid"}:
+        return CalorieBucket.MEDIUM
+    return None
+
+
+def _coerce_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    s = _normalize_term(str(value))
+    if s in {"true", "yes", "y", "1"}:
+        return True
+    if s in {"false", "no", "n", "0"}:
+        return False
+    return False
+
+
+def _sanitize_terms(value: Any, *, max_items: int = 12) -> List[str]:
+    if not value:
+        return []
+    items: List[str]
+    if isinstance(value, (list, tuple, set)):
+        items = [str(x) for x in value]
+    else:
+        items = [str(value)]
+
+    out: List[str] = []
+    seen: Set[str] = set()
+    for raw in items:
+        t = _normalize_term(raw)
+        if not t:
+            continue
+        if len(t) > 64:
+            t = t[:64].strip()
+        if not t:
+            continue
+        if t in seen:
+            continue
+        seen.add(t)
+        out.append(t)
+        if len(out) >= max_items:
+            break
+    return out
 
 
 def parse_query(query: str) -> ParsedQuery:
@@ -159,16 +281,17 @@ def parse_query(query: str) -> ParsedQuery:
     model_name = getattr(settings, "GEMINI_MODEL", "gemini-1.5-flash")
 
     if not api_key:
+        logger.debug("parse_query: missing GEMINI_API_KEY, using fallback")
         return _fallback_parse(query)
 
     try:
-        import google.generativeai as genai  # type: ignore
-    except Exception:
-        return _fallback_parse(query)
+        try:
+            from google import genai  # type: ignore
 
-    try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(model_name)
+            client = genai.Client(api_key=api_key)
+            use_new_sdk = True
+        except Exception:
+            use_new_sdk = False
 
         prompt = (
             "You are a parser for a recipe search API. Convert the user query into a compact JSON object. "
@@ -184,20 +307,47 @@ def parse_query(query: str) -> ParsedQuery:
             f"User query: {query}\n"
         )
 
-        resp = model.generate_content(prompt)
-        raw = getattr(resp, "text", "") or ""
+        if use_new_sdk:
+            resp = client.models.generate_content(model=model_name, contents=prompt)
+            raw = getattr(resp, "text", "") or ""
+        else:
+            try:
+                import google.generativeai as genai_old  # type: ignore
+
+                genai_old.configure(api_key=api_key)
+                model = genai_old.GenerativeModel(model_name)
+                resp = model.generate_content(prompt)
+                raw = getattr(resp, "text", "") or ""
+            except Exception:
+                logger.debug("parse_query: Gemini SDK import failed, using fallback")
+                return _fallback_parse(query)
+
         data = _try_parse_json_from_text(raw)
         if not isinstance(data, dict):
+            logger.debug("parse_query: Gemini did not return JSON, using fallback")
             return _fallback_parse(query)
 
-        return ParsedQuery(
-            diet=data.get("diet"),
-            calorie_bucket=data.get("calorie_bucket"),
-            include_terms=list(data.get("include_terms") or []),
-            exclude_terms=list(data.get("exclude_terms") or []),
-            wants_high_calorie=bool(data.get("wants_high_calorie") or False),
+        diet = _coerce_diet(data.get("diet"))
+        calorie_bucket = _coerce_calorie_bucket(data.get("calorie_bucket"))
+        include_terms = _sanitize_terms(data.get("include_terms"))
+        exclude_terms = _sanitize_terms(data.get("exclude_terms"))
+        wants_high_calorie = _coerce_bool(data.get("wants_high_calorie"))
+
+        parsed = ParsedQuery(
+            diet=diet,
+            calorie_bucket=calorie_bucket,
+            include_terms=include_terms,
+            exclude_terms=exclude_terms,
+            wants_high_calorie=wants_high_calorie,
         )
+
+        if parsed.calorie_bucket is None and re.search(r"\b(high[-\s]?cal|high[-\s]?calorie|high[-\s]?calories|high\s+kcal)\b", _normalize_term(query)):
+            parsed.calorie_bucket = CalorieBucket.HIGH
+            parsed.wants_high_calorie = True
+
+        return parsed
     except Exception:
+        logger.debug("parse_query: Gemini parse failed, using fallback", exc_info=True)
         return _fallback_parse(query)
 
 
@@ -245,9 +395,19 @@ def _apply_text_search(base_query, q: str):
     )
 
 
-def _apply_text_search_terms(base_query, terms: List[str]):
-    # Make text filtering lenient: match ANY term across name/description/instructions.
+def _apply_text_search_terms(base_query, terms: List[str], *, require_all: bool = False):
+    # Default behavior remains lenient (ANY term). When require_all=True, enforce ALL terms.
     if not terms:
+        return base_query
+
+    if require_all:
+        for t in terms:
+            like = f"%{t}%"
+            base_query = base_query.filter(
+                (Recipe.name.ilike(like))
+                | (Recipe.description.ilike(like))
+                | (Recipe.instructions.ilike(like))
+            )
         return base_query
 
     clauses = []
@@ -259,6 +419,38 @@ def _apply_text_search_terms(base_query, terms: List[str]):
             | (Recipe.instructions.ilike(like))
         )
     return base_query.filter(or_(*clauses))
+
+
+def _detect_nutrition_constraints(query: str, parsed: ParsedQuery) -> Dict[str, bool]:
+    q = f" { _normalize_term(query) } "
+    include = { _normalize_term(t) for t in (parsed.include_terms or []) }
+
+    wants_high_protein = (
+        " high protein " in q
+        or " high-protein " in q
+        or " protein rich " in q
+        or "protein" in include and "high" in include
+        or "high protein" in include
+    )
+    wants_low_carb = (
+        " low carb " in q
+        or " low-carb " in q
+        or " low carbs " in q
+        or " low carbohydrate " in q
+        or " keto " in q
+        or " keto-friendly " in q
+        or "low carb" in include
+        or "low carbohydrate" in include
+    )
+
+    # If multiple constraints are present, prefer AND matching.
+    require_all_text_terms = wants_high_protein and wants_low_carb
+
+    return {
+        "high_protein": wants_high_protein,
+        "low_carb": wants_low_carb,
+        "require_all_text_terms": require_all_text_terms,
+    }
 
 
 def _get_mapped_ingredient_ids(db: Session, allergy_terms: Set[str], user: User) -> Set[int]:
@@ -335,7 +527,76 @@ def _fetch_results(db_query, limit: int) -> List[RecipeResult]:
         calories = None
         if nut is not None and nut.calories is not None:
             calories = float(nut.calories)
-        out.append(RecipeResult(id=recipe.id, name=recipe.name, calories=calories, reasons=[]))
+        reasons: List[str] = []
+        if nut is not None:
+            if nut.protein_g is not None:
+                reasons.append(f"protein_g={float(nut.protein_g):.1f}")
+            if nut.carbs_g is not None:
+                reasons.append(f"carbs_g={float(nut.carbs_g):.1f}")
+        out.append(RecipeResult(id=recipe.id, name=recipe.name, calories=calories, reasons=reasons))
+    return out
+
+
+def _score_recipe_text(recipe: Recipe, terms: List[str]) -> Tuple[int, int, int, int]:
+    if not terms:
+        return 0, 0, 0, 0
+
+    name_text = (recipe.name or "").lower()
+    desc_text = (recipe.description or "").lower() if recipe.description else ""
+    instr_text = (recipe.instructions or "").lower()
+
+    name_hits = 0
+    desc_hits = 0
+    instr_hits = 0
+    for t in terms:
+        tt = (t or "").strip().lower()
+        if not tt:
+            continue
+        if tt in name_text:
+            name_hits += 1
+        elif tt in desc_text:
+            desc_hits += 1
+        elif tt in instr_text:
+            instr_hits += 1
+
+    score = (name_hits * 5) + (desc_hits * 2) + instr_hits
+    return score, name_hits, desc_hits, instr_hits
+
+
+def _fetch_ranked_results(db_query, limit: int, terms: List[str]) -> List[RecipeResult]:
+    if not terms:
+        return _fetch_results(db_query, limit)
+
+    fetch_limit = max(limit * 10, 50)
+    fetch_limit = min(fetch_limit, 250)
+
+    rows = db_query.limit(fetch_limit).all()
+    scored: List[Tuple[int, int, int, int, Recipe, Optional[RecipeNutritionalInfo]]] = []
+    for recipe, nut in rows:
+        score, name_hits, desc_hits, instr_hits = _score_recipe_text(recipe, terms)
+        scored.append((score, name_hits, desc_hits, instr_hits, recipe, nut))
+
+    scored.sort(key=lambda x: (-x[0], -x[1], -x[2], x[4].id))
+
+    out: List[RecipeResult] = []
+    for score, name_hits, desc_hits, instr_hits, recipe, nut in scored[:limit]:
+        calories = None
+        if nut is not None and nut.calories is not None:
+            calories = float(nut.calories)
+        reasons: List[str] = [f"score={score}"]
+        if name_hits:
+            reasons.append(f"name_matches={name_hits}")
+        if desc_hits:
+            reasons.append(f"desc_matches={desc_hits}")
+        if instr_hits:
+            reasons.append(f"instr_matches={instr_hits}")
+        if nut is not None:
+            if nut.protein_g is not None:
+                reasons.append(f"protein_g={float(nut.protein_g):.1f}")
+            if nut.carbs_g is not None:
+                reasons.append(f"carbs_g={float(nut.carbs_g):.1f}")
+        out.append(RecipeResult(id=recipe.id, name=recipe.name, calories=calories, reasons=reasons))
+
     return out
 
 
@@ -357,6 +618,21 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
 
     mapped_ingredient_ids = _get_mapped_ingredient_ids(db, allergy_terms, user)
 
+    q_norm = _normalize_term(query)
+    q_tokens = set(re.findall(r"[a-zA-Z]{3,}", q_norm))
+    warnings: List[str] = []
+    for a in sorted(allergy_terms):
+        syns = _ALLERGY_QUERY_SYNONYMS.get(a, [])
+        for s in syns:
+            st = _normalize_term(s)
+            if not st:
+                continue
+            if st in q_tokens or f" {st} " in f" {q_norm} ":
+                warnings.append(f"Query seems to include '{st}' but you have selected allergy '{a}', so relevant recipes may be excluded.")
+                break
+
+    constraints = _detect_nutrition_constraints(query, parsed)
+
     applied: Dict[str, Any] = {
         "parsed": parsed.dict(),
         "bmi": bmi,
@@ -364,11 +640,27 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
         "default_activity": "sedentary",
         "allergy_terms": sorted(allergy_terms),
         "mapped_ingredient_ids": sorted(mapped_ingredient_ids),
+        "warnings": warnings,
+        "nutrition": {
+            "high_protein": bool(constraints.get("high_protein")),
+            "low_carb": bool(constraints.get("low_carb")),
+            "high_protein_min_g": _HIGH_PROTEIN_MIN_G,
+            "low_carb_max_g": _LOW_CARB_MAX_G,
+        },
     }
 
     search_terms = _extract_search_terms(query, parsed)
     # Never use exclusions as positive search terms.
     search_terms = [t for t in search_terms if _normalize_term(t) not in allergy_terms]
+
+    # If we detected nutrition constraints, don't let generic nutrition words become
+    # required text terms (otherwise we'd filter out valid results that don't literally
+    # contain the word 'protein' or 'carb' in the recipe text).
+    if constraints.get("high_protein"):
+        search_terms = [t for t in search_terms if t not in {"protein", "proteins"}]
+    if constraints.get("low_carb"):
+        search_terms = [t for t in search_terms if t not in {"carb", "carbs", "carbohydrate", "carbohydrates", "keto"}]
+
     applied["search_terms"] = search_terms
 
     # Soft enforcement: if BMI is high and user did NOT explicitly ask for high calorie,
@@ -384,7 +676,13 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
     results: List[RecipeResult] = []
     seen: Set[int] = set()
 
-    def run_once(bucket: Optional[CalorieBucket]) -> List[RecipeResult]:
+    def run_once(
+        bucket: Optional[CalorieBucket],
+        *,
+        high_protein: bool = False,
+        low_carb: bool = False,
+        require_all_text_terms: bool = False,
+    ) -> List[RecipeResult]:
         q0 = _build_base_recipe_query(db)
 
         # Diet filter
@@ -396,10 +694,16 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
             )
 
         # Text search: only apply if we extracted meaningful terms.
-        q0 = _apply_text_search_terms(q0, search_terms)
+        q0 = _apply_text_search_terms(q0, search_terms, require_all=require_all_text_terms)
 
         # Allergy / exclusions
         q0 = _apply_allergy_exclusions(q0, allergy_terms, mapped_ingredient_ids)
+
+        # Nutrition constraints
+        if high_protein:
+            q0 = q0.filter(RecipeNutritionalInfo.protein_g >= _HIGH_PROTEIN_MIN_G)
+        if low_carb:
+            q0 = q0.filter(RecipeNutritionalInfo.carbs_g <= _LOW_CARB_MAX_G)
 
         # Calorie bucket filter
         if bucket is not None:
@@ -414,32 +718,73 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
                 q0 = q0.filter(RecipeNutritionalInfo.calories > _MEDIUM_MAX)
 
         q0 = q0.order_by(Recipe.id.asc())
-        return _fetch_results(q0, limit)
+        return _fetch_ranked_results(q0, limit, search_terms)
 
-    if preferred_buckets:
-        for b in preferred_buckets:
-            for r in run_once(b):
+    # When user asks for multiple constraints like "high protein low carb", prefer
+    # matching BOTH first, then gracefully relax.
+    attempts: List[Tuple[bool, bool, bool, str]] = []
+    wants_hp = bool(constraints.get("high_protein"))
+    wants_lc = bool(constraints.get("low_carb"))
+    wants_all = bool(constraints.get("require_all_text_terms"))
+    if wants_hp or wants_lc:
+        if wants_hp and wants_lc:
+            attempts.append((True, True, wants_all, "both"))
+            attempts.append((True, False, False, "high_protein_only"))
+            attempts.append((False, True, False, "low_carb_only"))
+        else:
+            attempts.append((wants_hp, wants_lc, False, "single"))
+        attempts.append((False, False, False, "no_nutrition"))
+    else:
+        attempts.append((False, False, False, "no_nutrition"))
+
+    used_attempt: Optional[str] = None
+
+    for hp, lc, req_all, label in attempts:
+        if len(results) >= limit:
+            break
+
+        before_count = len(results)
+        if preferred_buckets:
+            for b in preferred_buckets:
+                for r in run_once(b, high_protein=hp, low_carb=lc, require_all_text_terms=req_all):
+                    if r.id in seen:
+                        continue
+                    r.reasons.append(f"calorie_bucket={_calorie_bucket_for_recipe(r.calories)}")
+                    if hp:
+                        r.reasons.append("constraint=high_protein")
+                    if lc:
+                        r.reasons.append("constraint=low_carb")
+                    if bmi is not None and bmi > _BMI_LOW_CAL_CUTOFF and not parsed.wants_high_calorie:
+                        r.reasons.append("bmi_high_prioritized_low")
+                    results.append(r)
+                    seen.add(r.id)
+                    if len(results) >= limit:
+                        break
+                if len(results) >= limit:
+                    break
+
+        # If still not enough results, run without calorie bucket restriction.
+        if len(results) < limit:
+            for r in run_once(None, high_protein=hp, low_carb=lc, require_all_text_terms=req_all):
                 if r.id in seen:
                     continue
-                r.reasons.append(f"calorie_bucket={_calorie_bucket_for_recipe(r.calories)}")
-                if bmi is not None and bmi > _BMI_LOW_CAL_CUTOFF and not parsed.wants_high_calorie:
-                    r.reasons.append("bmi_high_prioritized_low")
+                if hp:
+                    r.reasons.append("constraint=high_protein")
+                if lc:
+                    r.reasons.append("constraint=low_carb")
+                if label != "no_nutrition":
+                    r.reasons.append(f"fallback_attempt={label}")
                 results.append(r)
                 seen.add(r.id)
                 if len(results) >= limit:
                     break
-            if len(results) >= limit:
-                break
 
-    # If still not enough results, run without calorie bucket restriction.
-    if len(results) < limit:
-        for r in run_once(None):
-            if r.id in seen:
-                continue
-            r.reasons.append("fallback_no_bucket")
-            results.append(r)
-            seen.add(r.id)
-            if len(results) >= limit:
-                break
+        if len(results) > before_count and used_attempt is None:
+            used_attempt = label
+
+    if used_attempt and used_attempt != "both" and wants_hp and wants_lc:
+        warnings.append(
+            "No recipes matched all requested constraints (high protein + low carb). Showing best available matches."
+        )
 
     return parsed, applied, results

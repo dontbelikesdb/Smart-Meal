@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { listAllergies } from "../api/allergiesApi";
+import { getMyAllergies, saveProfile, setMyAllergies } from "../api/profileApi";
+import { getCurrentUser } from "../utils/auth";
+
 export default function ProfileForm() {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("currentUser"));
+  const user = getCurrentUser();
 
   const [editMode, setEditMode] = useState(false);
   const [profileExists, setProfileExists] = useState(false);
@@ -52,6 +56,28 @@ export default function ProfileForm() {
     } else {
       setEditMode(true);
     }
+
+    (async () => {
+      try {
+        const [allergiesResp, mineResp] = await Promise.all([
+          listAllergies(),
+          getMyAllergies(),
+        ]);
+
+        const all = allergiesResp?.data || [];
+        const mine = mineResp?.data?.allergy_ids || [];
+
+        const idToName = new Map(all.map((a) => [a.id, a.name]));
+        const selectedNames = mine.map((id) => idToName.get(id)).filter(Boolean);
+
+        setForm((prev) => ({
+          ...prev,
+          allergies: selectedNames.length ? selectedNames.join(", ") : prev.allergies,
+        }));
+      } catch {
+        // ignore
+      }
+    })();
     // eslint-disable-next-line
   }, []);
 
@@ -63,7 +89,7 @@ export default function ProfileForm() {
     setForm({ ...form, bmi: bmiValue });
   };
 
-  const save = () => {
+  const save = async () => {
     setSaving(true);
 
     const profile = {
@@ -87,15 +113,48 @@ export default function ProfileForm() {
       lastUpdated: new Date().toISOString(),
     };
 
-    localStorage.setItem(`profile_${user.email}`, JSON.stringify(profile));
-    localStorage.setItem("profileCompleted", "true");
+    try {
+      await saveProfile({
+        age: profile.age,
+        gender: profile.gender,
+        height_cm: profile.height_cm,
+        weight_kg: profile.weight_kg,
+      });
 
-    setSaved(true);
-    setSaving(false);
-    setProfileExists(true);
-    setEditMode(false);
+      const allergiesResp = await listAllergies();
+      const all = allergiesResp?.data || [];
+      const nameToId = new Map(all.map((a) => [String(a.name || "").toLowerCase().trim(), a.id]));
 
-    setTimeout(() => setSaved(false), 1500);
+      const entered = (profile.allergies || [])
+        .map((x) => String(x || "").toLowerCase().trim())
+        .filter(Boolean);
+
+      const ids = [];
+      const unknown = [];
+      for (const n of entered) {
+        const id = nameToId.get(n) || (n.endsWith("s") ? nameToId.get(n.slice(0, -1)) : undefined);
+        if (id) ids.push(id);
+        else unknown.push(n);
+      }
+
+      await setMyAllergies(Array.from(new Set(ids)));
+      if (unknown.length) {
+        alert(`Unknown allergy name(s) ignored: ${unknown.join(", ")}`);
+      }
+
+      localStorage.setItem(`profile_${user.email}`, JSON.stringify(profile));
+      localStorage.setItem("profileCompleted", "true");
+
+      setSaved(true);
+      setProfileExists(true);
+      setEditMode(false);
+      setTimeout(() => setSaved(false), 1500);
+    } catch (e) {
+      const msg = e?.response?.data?.detail || e?.message || "Failed to save profile";
+      alert(String(msg));
+    } finally {
+      setSaving(false);
+    }
   };
 
   /* ===========================

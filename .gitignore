@@ -6,6 +6,12 @@ data/raw/*.parquet
 
 # Node
 node_modules/
+dist/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Python
 __pycache__/

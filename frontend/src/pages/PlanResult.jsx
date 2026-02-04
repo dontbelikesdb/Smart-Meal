@@ -1,28 +1,32 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { getCurrentUser } from "../utils/auth";
+
+const _placeholderImageStyle = {
+  backgroundImage: "linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)",
+};
+
 export default function PlanResult() {
   const navigate = useNavigate();
-  const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+  const userEmail = getCurrentUser()?.email || "";
   const [meals, setMeals] = useState([]);
 
   /* -----------------------------------------
      Load plan
   ----------------------------------------- */
   useEffect(() => {
-    if (!currentUser) {
+    if (!userEmail) {
       navigate("/login");
       return;
     }
 
-    const stored = localStorage.getItem(
-      `mealplan_${currentUser.email}`
-    );
+    const stored = localStorage.getItem(`mealplan_${userEmail}`);
 
     if (stored) {
       setMeals(JSON.parse(stored));
     }
-  }, [currentUser, navigate]);
+  }, [userEmail, navigate]);
 
   /* -----------------------------------------
      Remove single meal
@@ -31,10 +35,7 @@ export default function PlanResult() {
     const updated = meals.filter((m) => m.id !== id);
     setMeals(updated);
 
-    localStorage.setItem(
-      `mealplan_${currentUser.email}`,
-      JSON.stringify(updated)
-    );
+    localStorage.setItem(`mealplan_${userEmail}`, JSON.stringify(updated));
   };
 
   /* -----------------------------------------
@@ -44,7 +45,7 @@ export default function PlanResult() {
     if (!window.confirm("Clear your entire meal plan?")) return;
 
     setMeals([]);
-    localStorage.removeItem(`mealplan_${currentUser.email}`);
+    localStorage.removeItem(`mealplan_${userEmail}`);
   };
 
   /* -----------------------------------------
@@ -53,9 +54,7 @@ export default function PlanResult() {
   if (!meals.length) {
     return (
       <div className="min-h-screen page flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white px-4 text-center">
-        <h2 className="text-xl font-bold mb-2">
-          No meals in your plan
-        </h2>
+        <h2 className="text-xl font-bold mb-2">No meals in your plan</h2>
         <p className="text-gray-500 mb-6">
           Start searching and add meals to build your plan
         </p>
@@ -82,9 +81,7 @@ export default function PlanResult() {
         </span>
       </div>
 
-      <p className="text-gray-500 mb-6">
-        Meals you’ve added so far
-      </p>
+      <p className="text-gray-500 mb-6">Meals you’ve added so far</p>
 
       <div className="space-y-4">
         {meals.map((meal) => (
@@ -96,23 +93,23 @@ export default function PlanResult() {
             <div
               className="h-36 bg-cover bg-center"
               style={{
-                backgroundImage: `url(${meal.image})`,
+                ...(meal.image
+                  ? { backgroundImage: `url(${meal.image})` }
+                  : _placeholderImageStyle),
               }}
             />
 
             {/* Content */}
             <div className="p-4">
-              <h3 className="text-lg font-bold mb-1">
-                {meal.title}
-              </h3>
+              <h3 className="text-lg font-bold mb-1">{meal.title}</h3>
 
               <p className="text-sm text-gray-500 mb-2">
-                {meal.calories} kcal • {meal.protein}
+                {meal.calories ?? "—"} kcal
               </p>
 
               <div className="flex justify-between items-center">
                 <span className="text-xs text-gray-400">
-                  ⏱ {meal.time}
+                  {meal.time ? `⏱ ${meal.time}` : ""}
                 </span>
 
                 <button

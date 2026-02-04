@@ -10,8 +10,8 @@ from app.core.config import settings
 from app.models.user import User
 from app.db.session import get_db
 
-# Use pbkdf2_sha256 to avoid bcrypt backend issues and password length limits
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+# Prefer pbkdf2_sha256 for new hashes, but allow verifying legacy bcrypt hashes
+pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 
 # OAuth2 scheme for token authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -19,6 +19,19 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash."""
     return pwd_context.verify(plain_password, hashed_password)
+
+
+def verify_and_update_password(
+    plain_password: str, hashed_password: str
+) -> tuple[bool, Optional[str]]:
+    try:
+        verified, new_hash = pwd_context.verify_and_update(plain_password, hashed_password)
+        return verified, new_hash
+    except Exception:
+        # Handle legacy cases where the DB may contain plaintext or unknown hash formats
+        if plain_password == hashed_password:
+            return True, get_password_hash(plain_password)
+        return False, None
 
 def get_password_hash(password: str) -> str:
     """Generate a password hash."""

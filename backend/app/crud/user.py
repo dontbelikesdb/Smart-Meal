@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional, Union
 
 from sqlalchemy.orm import Session
 
-from app.core.security import get_password_hash, verify_password
+from app.core.security import get_password_hash, verify_and_update_password
 from app.crud.base import CRUDBase
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
@@ -41,8 +41,14 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         user = self.get_by_email(db, email=email)
         if not user:
             return None
-        if not verify_password(password, user.hashed_password):
+        verified, new_hash = verify_and_update_password(password, user.hashed_password)
+        if not verified:
             return None
+        if new_hash and new_hash != user.hashed_password:
+            user.hashed_password = new_hash
+            db.add(user)
+            db.commit()
+            db.refresh(user)
         return user
 
     def is_active(self, user: User) -> bool:

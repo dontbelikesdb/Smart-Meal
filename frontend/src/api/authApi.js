@@ -1,23 +1,24 @@
-export const signup = async (email, password, full_name) => {
-  const users = JSON.parse(localStorage.getItem("users") || "[]");
+import axiosClient from "./axiosClient";
 
-  if (users.find(u => u.email === email)) {
-    throw new Error("User already exists");
-  }
-
-  users.push({ email, password, full_name });
-  localStorage.setItem("users", JSON.stringify(users));
-
-  return { data: { success: true } };
+export const signup = (email, password, full_name) => {
+  return axiosClient.post("/users/", {
+    email,
+    password,
+    full_name,
+  });
 };
 
-export const login = async (email, password) => {
-  const users = JSON.parse(localStorage.getItem("users") || "[]");
-  const user = users.find(u => u.email === email && u.password === password);
+export const login = (email, password) => {
+  const body = new URLSearchParams();
+  body.set("username", email);
+  body.set("password", password);
+  return axiosClient.post("/auth/login/access-token", body, {
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+  });
+};
 
-  if (!user) {
-    throw new Error("Invalid credentials");
-  }
-
-  return { data: { access_token: email } };
+export const getMe = () => {
+  return axiosClient.get("/users/me");
 };

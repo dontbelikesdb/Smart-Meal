@@ -1,5 +1,5 @@
-export const setToken = (email) => {
-  localStorage.setItem("token", email);
+export const setToken = (accessToken) => {
+  localStorage.setItem("token", accessToken);
 };
 
 export const getToken = () => {
@@ -8,11 +8,19 @@ export const getToken = () => {
 
 export const logout = () => {
   localStorage.removeItem("token");
+  localStorage.removeItem("currentUser");
 };
 
 export const getCurrentUser = () => {
-  const email = getToken();
-  if (!email) return null;
-  const users = JSON.parse(localStorage.getItem("users") || "[]");
-  return users.find(u => u.email === email);
+  const raw = localStorage.getItem("currentUser");
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
+export const setCurrentUser = (user) => {
+  localStorage.setItem("currentUser", JSON.stringify(user));
 };

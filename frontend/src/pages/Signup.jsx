@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { signup } from "../api/authApi";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -10,24 +11,24 @@ export default function Signup() {
   });
   const [error, setError] = useState("");
 
-  const submit = () => {
+  const submit = async () => {
+    setError("");
     if (!form.email || !form.password || !form.full_name) {
       setError("Please fill in all fields");
       return;
     }
 
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-
-    if (users.find((u) => u.email === form.email)) {
-      setError("An account with this email already exists");
-      return;
+    try {
+      await signup(form.email, form.password, form.full_name);
+      alert("Account created successfully! Please login.");
+      navigate("/login");
+    } catch (e) {
+      const msg =
+        e?.response?.data?.detail ||
+        e?.message ||
+        "Signup failed";
+      setError(String(msg));
     }
-
-    users.push(form);
-    localStorage.setItem("users", JSON.stringify(users));
-
-    alert("🎉 Account created successfully!");
-    navigate("/login");
   };
 
   return (

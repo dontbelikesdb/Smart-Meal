@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { setToken } from "../utils/auth";
+import { login, getMe } from "../api/authApi";
+import { setCurrentUser, setToken } from "../utils/auth";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -8,23 +9,29 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const submit = () => {
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
+  const submit = async () => {
+    setError("");
+    try {
+      const resp = await login(email, password);
+      const token = resp?.data?.access_token;
+      if (!token) {
+        setError("Login failed: missing access token");
+        return;
+      }
 
-    const user = users.find(
-      (u) => u.email === email && u.password === password
-    );
+      setToken(token);
 
-    if (!user) {
-      setError("Invalid email or password");
-      return;
+      const me = await getMe();
+      setCurrentUser(me?.data);
+
+      navigate("/profile", { replace: true });
+    } catch (e) {
+      const msg =
+        e?.response?.data?.detail ||
+        e?.message ||
+        "Invalid email or password";
+      setError(String(msg));
     }
-
-    setToken("demo-token");
-    localStorage.setItem("currentUser", JSON.stringify(user));
-
-    const profile = localStorage.getItem(`profile_${user.email}`);
-    navigate(profile ? "/generate" : "/profile", { replace: true });
   };
 
   return (

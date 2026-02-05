@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 
 import { getCurrentUser } from "../utils/auth";
 
-const _placeholderImageStyle = {
-  backgroundImage: "linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)",
-};
+const _fallbackImage =
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuDu7F1GZildoPkQwlmkdCrVYHPKjK5xrJ1P7I88EPD4jgKyV7EL8wCH2-q-UzBOb4HZfVWXqOssKBorvvmaR-pB_Et6QZcfchxNhMUDt7mRB8uew2CwYiGFnnrvdOUe7la1ezB7OgmdSmv9du81bCB_fdfIb-uo0PYV-4AUbB9WhVCHtKDeIo51DidymHAZgwdihPQoSwOTHoKfb56NJ5jmFJ9e00TqKt44AgUq2aOORYlbn49DlzmGgBJEdZ57ci9ZPOYlejxvfRZ3";
+
+const _getMealImage = (meal) => meal?.image || meal?.imageUrl || meal?.image_url || null;
 
 export default function PlanResult() {
   const navigate = useNavigate();
@@ -53,18 +54,32 @@ export default function PlanResult() {
   ----------------------------------------- */
   if (!meals.length) {
     return (
-      <div className="min-h-screen page flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white px-4 text-center">
-        <h2 className="text-xl font-bold mb-2">No meals in your plan</h2>
-        <p className="text-gray-500 mb-6">
-          Start searching and add meals to build your plan
-        </p>
-
-        <button
-          onClick={() => navigate("/generate")}
-          className="bg-green-600 text-white px-6 py-3 rounded-2xl font-semibold"
+      <div className="min-h-screen page relative overflow-hidden bg-gray-950 text-white">
+        <div
+          className="fixed inset-0 z-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${_fallbackImage})` }}
         >
-          Find Meals
-        </button>
+          <div className="absolute inset-0 bg-black/60" />
+        </div>
+
+        <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 text-center pb-28">
+          <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
+            <h2 className="font-serif text-3xl font-bold mb-2">
+              No meals in your plan
+            </h2>
+            <p className="text-white/60 mb-6">
+              Start searching and add meals to build your plan
+            </p>
+
+            <button
+              onClick={() => navigate("/generate")}
+              className="w-full bg-brand-green hover:bg-green-700 text-white font-bold text-lg py-4 rounded-xl shadow-btn active:scale-[0.99] transition-all"
+              type="button"
+            >
+              Find Meals
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -73,80 +88,93 @@ export default function PlanResult() {
      View Plan
   ----------------------------------------- */
   return (
-    <div className="min-h-screen page bg-gradient-to-b from-blue-50 to-white px-4 pt-8 pb-28">
-      <div className="flex justify-between items-center mb-2">
-        <h2 className="text-2xl font-bold">Your Meal Plan</h2>
-        <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
-          {meals.length} meals
-        </span>
+    <div className="min-h-screen page relative overflow-hidden bg-gray-950 text-white">
+      <div
+        className="fixed inset-0 z-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${_fallbackImage})` }}
+      >
+        <div className="absolute inset-0 bg-black/60" style={{ backdropFilter: "blur(20px) brightness(0.4)" }} />
       </div>
 
-      <p className="text-gray-500 mb-6">Meals you’ve added so far</p>
+      <main className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 lg:pt-12 pb-28">
+        <header className="flex items-center justify-between mb-2">
+          <h1 className="font-serif text-3xl md:text-4xl font-bold tracking-tight">
+            Your Meal Plan
+          </h1>
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-200 border border-blue-500/30">
+            {meals.length} meals
+          </span>
+        </header>
+        <p className="text-white/60 text-sm md:text-base mb-8">
+          Meals you've added so far
+        </p>
 
-      <div className="space-y-4">
-        {meals.map((meal) => (
-          <div
-            key={meal.id}
-            className="bg-white rounded-2xl shadow overflow-hidden"
-          >
-            {/* Image */}
-            <div
-              className="h-36 bg-cover bg-center"
-              style={{
-                ...(meal.image
-                  ? { backgroundImage: `url(${meal.image})` }
-                  : _placeholderImageStyle),
-              }}
-            />
-
-            {/* Content */}
-            <div className="p-4">
-              <h3 className="text-lg font-bold mb-1">{meal.title}</h3>
-
-              <p className="text-sm text-gray-500 mb-2">
-                {meal.calories ?? "—"} kcal
-              </p>
-
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-400">
-                  {meal.time ? `⏱ ${meal.time}` : ""}
-                </span>
-
-                <button
-                  onClick={() => removeMeal(meal.id)}
-                  className="px-4 py-2 rounded-lg bg-red-50 text-red-600 text-sm font-semibold transition active:scale-95"
-                >
-                  Remove
-                </button>
+        <div className="space-y-6 mb-10">
+          {meals.map((meal) => {
+            const img = _getMealImage(meal) || _fallbackImage;
+            return (
+              <div
+                key={meal.id}
+                className="bg-white/5 backdrop-blur-md rounded-2xl overflow-hidden shadow-card border border-white/10 hover:border-white/20 transition-all group"
+              >
+                <div className="h-48 sm:h-56 w-full overflow-hidden relative">
+                  <img
+                    alt={meal.title}
+                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
+                    src={img}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                </div>
+                <div className="p-5 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div>
+                      <h3 className="font-serif text-xl font-bold text-white mb-2 leading-snug">
+                        {meal.title}
+                      </h3>
+                      <div className="flex items-center text-white/60 text-sm">
+                        <i className="fa-solid fa-fire-flame-curved text-orange-400 mr-2" />
+                        <span>{meal.calories ?? "—"} kcal</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeMeal(meal.id)}
+                      className="self-start sm:self-center px-4 py-2 text-sm font-medium text-[#E57373] bg-[rgba(229,115,115,0.1)] hover:bg-[rgba(229,115,115,0.2)] rounded-lg transition-colors border border-[rgba(229,115,115,0.2)]"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
 
-      {/* Bottom Actions */}
-      <div className="mt-10 space-y-4">
-        <button
-          onClick={() => navigate("/generate")}
-          className="w-full bg-green-600 text-white py-4 rounded-2xl text-lg font-bold shadow-lg"
-        >
-          Add More Meals
-        </button>
-
-        <button
-          onClick={clearPlan}
-          className="w-full bg-red-100 text-red-600 py-3 rounded-xl font-semibold"
-        >
-          Clear Plan
-        </button>
-
-        <button
-          onClick={() => navigate("/profile")}
-          className="w-full bg-gray-200 text-gray-700 py-3 rounded-xl"
-        >
-          Update Profile
-        </button>
-      </div>
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={() => navigate("/generate")}
+            className="w-full bg-brand-green hover:bg-green-700 text-white font-bold text-lg py-4 rounded-xl shadow-btn active:scale-[0.99] transition-all flex items-center justify-center group"
+          >
+            <i className="fa-solid fa-plus mr-2 group-hover:rotate-90 transition-transform" />
+            Add More Meals
+          </button>
+          <button
+            type="button"
+            onClick={clearPlan}
+            className="w-full bg-[rgba(229,115,115,0.1)] hover:bg-[rgba(229,115,115,0.2)] text-[#E57373] font-semibold text-lg py-4 rounded-xl border border-[rgba(229,115,115,0.2)] active:scale-[0.99] transition-all"
+          >
+            Clear Plan
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/profile")}
+            className="w-full bg-white/5 hover:bg-white/10 text-white/80 font-medium text-lg py-4 rounded-xl border border-white/10 active:scale-[0.99] transition-all"
+          >
+            Update Profile
+          </button>
+        </div>
+      </main>
     </div>
   );
 }

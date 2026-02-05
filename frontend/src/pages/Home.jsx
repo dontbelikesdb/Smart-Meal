@@ -73,13 +73,6 @@ export default function Home() {
           >
             Plan
           </button>
-          <button
-            type="button"
-            onClick={() => navigate(token ? "/profile" : "/signup")}
-            className="bg-brand-green px-6 py-2.5 rounded-full font-semibold hover:bg-green-700 transition-all shadow-btn"
-          >
-            Continue to App
-          </button>
         </div>
       </nav>
 

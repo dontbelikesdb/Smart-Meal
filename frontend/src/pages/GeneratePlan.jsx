@@ -22,6 +22,7 @@ export default function GeneratePlan() {
   const [warnings, setWarnings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeDiet, setActiveDiet] = useState(null);
+  const [favorites, setFavorites] = useState([]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -53,8 +54,8 @@ export default function GeneratePlan() {
         calories: r.calories,
         reasons: r.reasons || [],
         tags: (r.reasons || []).slice(0, 3),
-        protein: "",
-        time: "",
+        imageUrl:
+          r.image_url || r.imageUrl || r.image || r.image_path || r.photo || null,
       }));
       setResults(mapped);
     } catch (e) {
@@ -109,161 +110,253 @@ export default function GeneratePlan() {
     navigate("/plan");
   };
 
+  const displayName =
+    currentUser?.full_name ||
+    currentUser?.name ||
+    currentUser?.email?.split("@")[0] ||
+    "User";
+
+  const getBadge = (meal) => {
+    const text = (meal?.reasons || []).join(" ").toLowerCase();
+    if (text.includes("low carb")) return { label: "Low Carb", cls: "bg-green-500/90" };
+    if (text.includes("high protein"))
+      return { label: "High Protein", cls: "bg-orange-500/90" };
+    if (text.includes("vegetarian"))
+      return { label: "Vegetarian", cls: "bg-blue-500/90" };
+    if (text.includes("vegan")) return { label: "Vegan", cls: "bg-emerald-500/90" };
+    if (text.includes("keto")) return { label: "Keto", cls: "bg-purple-500/90" };
+    if (text.includes("paleo")) return { label: "Paleo", cls: "bg-orange-500/90" };
+    if (text.includes("gluten"))
+      return { label: "Gluten-Free", cls: "bg-amber-500/90" };
+    return null;
+  };
+
+  const toggleFavorite = (mealId) => {
+    setFavorites((prev) =>
+      prev.includes(mealId) ? prev.filter((id) => id !== mealId) : [...prev, mealId],
+    );
+  };
+
   return (
-    <div className="min-h-screen page bg-cream-bg text-gray-900">
-      <div className="flex-1 px-5 md:px-12 pt-8 pb-28 md:pb-12 max-w-7xl mx-auto w-full">
-        <header className="mb-8">
-          <h1 className="font-display text-4xl md:text-5xl leading-tight text-[#1A4D1A]">
-            Meal
-            <br className="md:hidden" /> Discovery Search
-          </h1>
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <main className="min-h-screen pb-28 lg:pb-12">
+        <header className="flex items-center justify-between p-4 lg:px-8 bg-slate-950 sticky top-0 z-40 border-b border-white/10">
+          <span className="text-xl font-serif font-bold text-brand-green">
+            SmartMeal
+          </span>
         </header>
 
-        <div className="space-y-6 lg:space-y-0 lg:flex lg:items-center lg:gap-4 mb-6">
-          <section className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <i className="fa-solid fa-magnifying-glass text-forest-green text-lg" />
+        <section className="p-4 lg:p-8">
+          <div
+            className="relative w-full h-64 lg:h-80 rounded-3xl overflow-hidden flex items-end p-8 lg:p-12"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.9)), url('https://images.unsplash.com/photo-1490818387583-1baba5e638af?auto=format&fit=crop&q=80&w=2000')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          >
+            <div className="relative z-10 max-w-2xl">
+              <h1 className="text-4xl lg:text-6xl font-serif font-bold text-white mb-2">
+                Hello, {displayName}
+              </h1>
+              <p className="text-lg lg:text-xl text-slate-200 font-light">
+                What would you like to cook today?
+              </p>
             </div>
-            <input
-              className="block w-full pl-12 pr-4 py-4 border-none shadow-sm text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-forest-green focus:outline-none bg-white rounded-2xl"
-              placeholder="Low carb, vegan, high protein..."
-              type="text"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                if (activeDiet) setActiveDiet(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSearch();
-              }}
-            />
-          </section>
-          <div className="lg:w-48">
+          </div>
+        </section>
+
+        <section className="px-4 lg:px-8 mt-6 relative z-20">
+          <div className="max-w-4xl mx-auto">
+            <div className="relative group">
+              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-green transition-colors">
+                <i className="fa-solid fa-magnifying-glass" />
+              </span>
+              <input
+                className="w-full h-16 lg:h-20 pl-16 pr-28 rounded-2xl bg-slate-900/70 border border-white/10 shadow-xl focus:ring-2 focus:ring-brand-green focus:outline-none text-lg text-white placeholder-slate-500"
+                placeholder="Search for dishes, e.g., low carb meals"
+                type="text"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  if (activeDiet) setActiveDiet(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSearch();
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-12 lg:h-14 px-5 rounded-xl bg-brand-green text-white font-bold shadow-btn hover:bg-green-700 transition-colors"
+              >
+                {loading ? "Searching..." : "Search"}
+              </button>
+            </div>
+
+            {warnings.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {warnings.map((w, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 p-3 rounded-2xl text-sm"
+                  >
+                    {w}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-5 overflow-x-auto no-scrollbar">
+              <div className="flex gap-3">
+                {_diets.map((d) => {
+                  const active = activeDiet === d.label;
+                  return (
+                    <button
+                      key={d.label}
+                      type="button"
+                      onClick={() => {
+                        const nextActive = active ? null : d.label;
+                        const nextQuery = active ? "" : d.query;
+                        setActiveDiet(nextActive);
+                        setQuery(nextQuery);
+                        if (nextQuery) handleSearch(nextQuery);
+                      }}
+                      className={`flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-full border transition-colors ${
+                        active
+                          ? "bg-brand-green text-white border-brand-green"
+                          : "bg-white/5 text-slate-200 border-white/10 hover:bg-white/10"
+                      }`}
+                    >
+                      <i className={`fa-solid ${d.icon}`} />
+                      <span className="text-sm font-semibold">{d.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="px-4 lg:px-8 py-12">
+          <div className="flex items-center justify-between mb-8 max-w-[1600px] mx-auto">
+            <h2 className="text-2xl lg:text-3xl font-serif font-bold text-white">
+              Recommended Meals
+            </h2>
             <button
               type="button"
-              onClick={handleSearch}
-              className="w-full bg-[#2F6B28] hover:bg-forest-green text-white font-bold py-4 rounded-2xl shadow-md transition-colors text-lg"
+              onClick={() => {
+                if (query.trim()) handleSearch();
+              }}
+              className="text-brand-green hover:underline font-semibold flex items-center gap-2"
             >
-              {loading ? "Searching..." : "Search"}
+              See All <i className="fa-solid fa-arrow-right text-sm" />
             </button>
           </div>
-        </div>
 
-        {warnings.length > 0 && (
-          <div className="mb-6 space-y-2">
-            {warnings.map((w, idx) => (
-              <div
-                key={idx}
-                className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 rounded-2xl text-sm"
-              >
-                {w}
-              </div>
-            ))}
-          </div>
-        )}
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 max-w-[1600px] mx-auto">
+            {results.map((meal) => {
+              const added = selectedMeals.some((m) => m.id === meal.id);
+              const fav = favorites.includes(meal.id);
+              const badge = getBadge(meal);
 
-        <section className="mb-8 overflow-x-auto no-scrollbar">
-          <div className="flex gap-3 md:gap-4 no-scrollbar">
-            {_diets.map((d) => {
-              const active = activeDiet === d.label;
               return (
-                <button
-                  key={d.label}
-                  type="button"
-                  onClick={() => {
-                    const nextActive = active ? null : d.label;
-                    const nextQuery = active ? "" : d.query;
-                    setActiveDiet(nextActive);
-                    setQuery(nextQuery);
-                    if (nextQuery) handleSearch(nextQuery);
-                  }}
-                  className={`flex flex-col items-center justify-center min-w-[4.5rem] h-20 bg-[#FFFBF2] border rounded-2xl transition-colors ${
-                    active
-                      ? "border-forest-green bg-[#F2EDE1]"
-                      : "border-[#EBE5D5] hover:bg-[#F2EDE1]"
+                <div
+                  key={meal.id}
+                  className={`group relative rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer ${
+                    added ? "ring-2 ring-brand-green" : ""
                   }`}
+                  onClick={() => toggleMeal(meal)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") toggleMeal(meal);
+                  }}
                 >
-                  <i
-                    className={`fa-solid ${d.icon} text-xl mb-1 ${
-                      active ? "text-forest-green" : "text-filter-text"
-                    }`}
-                  />
-                  <span className="text-xs font-medium text-[#4A4A4A]">
-                    {d.label}
-                  </span>
-                </button>
+                  {meal.imageUrl ? (
+                    <img
+                      alt={meal.title}
+                      className="w-full h-72 lg:h-80 object-cover group-hover:scale-110 transition-transform duration-500"
+                      src={meal.imageUrl}
+                    />
+                  ) : (
+                    <div className="w-full h-72 lg:h-80 bg-gradient-to-br from-slate-800 via-slate-900 to-black flex items-center justify-center">
+                      <i className="fa-solid fa-utensils text-4xl text-white/60" />
+                    </div>
+                  )}
+
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                  <button
+                    className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/40 transition-colors"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(meal.id);
+                    }}
+                    aria-label={fav ? "Unfavorite" : "Favorite"}
+                  >
+                    <i className={fav ? "fa-solid fa-heart" : "fa-regular fa-heart"} />
+                  </button>
+
+                  <div className="absolute bottom-5 left-5 right-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <h3 className="text-white text-lg font-bold leading-tight">
+                        {meal.title}
+                      </h3>
+                      <span className="text-white/80 text-sm font-semibold whitespace-nowrap">
+                        {meal.calories ?? "—"} kcal
+                      </span>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      {badge ? (
+                        <span
+                          className={`inline-block px-3 py-1 ${badge.cls} text-white text-xs font-bold rounded-lg uppercase tracking-wider`}
+                        >
+                          {badge.label}
+                        </span>
+                      ) : (
+                        <span className="inline-block px-3 py-1 bg-white/10 text-white text-xs font-bold rounded-lg uppercase tracking-wider">
+                          Meal
+                        </span>
+                      )}
+
+                      {added ? (
+                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-brand-green text-white text-xs font-bold">
+                          <i className="fa-solid fa-check" /> Added
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-white/10 text-white text-xs font-bold">
+                          <i className="fa-solid fa-plus" /> Add
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
               );
             })}
           </div>
+
+          {results.length === 0 && query && !loading && (
+            <p className="text-center text-slate-400 mt-10">
+              No meals found. Try a different search.
+            </p>
+          )}
+
+          {results.length === 0 && !query && !loading && (
+            <p className="text-center text-slate-400 mt-10">
+              Search to see recommended meals.
+            </p>
+          )}
         </section>
+      </main>
 
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {results.map((meal) => {
-            const added = selectedMeals.some((m) => m.id === meal.id);
-
-            return (
-              <article
-                key={meal.id}
-                className={`bg-white rounded-3xl overflow-hidden shadow-lg cursor-pointer transition-transform active:scale-[0.99] ${
-                  added ? "ring-4 ring-forest-green/50" : ""
-                }`}
-                onClick={() => toggleMeal(meal)}
-              >
-                <div className="p-4 md:p-5">
-                  <div className="h-24 rounded-2xl bg-gradient-to-br from-forest-green/10 via-leaf-green/5 to-white flex items-center justify-center mb-4">
-                    <i className="fa-solid fa-utensils text-forest-green text-2xl opacity-80" />
-                  </div>
-
-                  <h3 className="font-bold text-base md:text-lg leading-snug mb-2 text-[#1A4D1A]">
-                    {meal.title}
-                  </h3>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs md:text-sm text-gray-600">
-                      {meal.calories ?? "—"} kcal
-                    </span>
-
-                    {added ? (
-                      <span className="bg-[#D1FAE5] text-[#065F46] text-[10px] md:text-xs font-bold px-2 py-1 rounded-full">
-                        Added
-                      </span>
-                    ) : (
-                      <span className="text-[10px] md:text-xs font-semibold text-forest-green">
-                        Tap to add
-                      </span>
-                    )}
-                  </div>
-
-                  {meal.tags?.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {meal.tags.slice(0, 2).map((t) => (
-                        <span
-                          key={t}
-                          className="text-[10px] md:text-xs bg-[#E9EFE9] text-forest-green px-2 py-1 rounded-full font-semibold"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-        </section>
-
-        {results.length === 0 && query && !loading && (
-          <p className="text-center text-gray-500 mt-10">
-            No meals found. Try a different search.
-          </p>
-        )}
-      </div>
-
-      {/* View plan */}
       {selectedMeals.length > 0 && (
         <button
           onClick={goToPlan}
-          className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-[#1E4620] text-white py-4 rounded-2xl text-lg font-bold shadow-lg z-50"
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-brand-green text-white py-4 rounded-2xl text-lg font-bold shadow-lg z-50"
           type="button"
         >
           View Plan ({selectedMeals.length})

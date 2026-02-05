@@ -7,11 +7,18 @@ export default function Navbar() {
   const location = useLocation();
 
   const isHome = location.pathname === "/";
+  const isDarkNav =
+    isHome ||
+    location.pathname === "/generate" ||
+    location.pathname === "/profile" ||
+    location.pathname === "/plan" ||
+    location.pathname === "/login" ||
+    location.pathname === "/signup";
 
   const isActive = (path) =>
     location.pathname === path
       ? "text-brand-green"
-      : isHome
+      : isDarkNav
         ? "text-white/50"
         : "text-gray-400";
 
@@ -19,9 +26,9 @@ export default function Navbar() {
 
   return (
     <nav
-      className={`fixed bottom-0 left-0 right-0 safe-area-pb z-50 ${
-        isHome
-          ? "bg-gray-900 border-t border-white/10"
+      className={`fixed bottom-0 left-0 right-0 safe-area-pb z-50 transition-colors ${
+        isDarkNav
+          ? "bg-black/20 backdrop-blur-md border-t border-white/10"
           : "bg-white border-t border-gray-200"
       }`}
     >
@@ -29,7 +36,7 @@ export default function Navbar() {
         <Link
           to="/"
           className={`flex flex-col items-center justify-center transition-colors ${
-            isHome ? "hover:bg-white/5" : "hover:bg-gray-50"
+            isDarkNav ? "hover:bg-white/5" : "hover:bg-gray-50"
           } ${isActive("/")}`}
         >
           <i className="fa-solid fa-house text-xl mb-1" />
@@ -39,7 +46,7 @@ export default function Navbar() {
         <Link
           to={gatedPath("/profile")}
           className={`flex flex-col items-center justify-center transition-colors ${
-            isHome ? "hover:bg-white/5" : "hover:bg-gray-50"
+            isDarkNav ? "hover:bg-white/5" : "hover:bg-gray-50"
           } ${isActive("/profile")}`}
         >
           <i className="fa-solid fa-user text-xl mb-1" />
@@ -49,7 +56,7 @@ export default function Navbar() {
         <Link
           to={gatedPath("/generate")}
           className={`flex flex-col items-center justify-center transition-colors ${
-            isHome ? "hover:bg-white/5" : "hover:bg-gray-50"
+            isDarkNav ? "hover:bg-white/5" : "hover:bg-gray-50"
           } ${isActive("/generate")}`}
         >
           <i className="fa-solid fa-magnifying-glass text-xl mb-1" />
@@ -59,7 +66,7 @@ export default function Navbar() {
         <Link
           to={gatedPath("/plan")}
           className={`flex flex-col items-center justify-center transition-colors ${
-            isHome ? "hover:bg-white/5" : "hover:bg-gray-50"
+            isDarkNav ? "hover:bg-white/5" : "hover:bg-gray-50"
           } ${isActive("/plan")}`}
         >
           <i className="fa-solid fa-calendar-days text-xl mb-1" />
@@ -73,8 +80,8 @@ export default function Navbar() {
               navigate("/login", { replace: true });
             }}
             className={`flex flex-col items-center justify-center transition-colors ${
-              isHome ? "hover:bg-white/5" : "hover:bg-gray-50"
-            } ${isHome ? "text-white/50 hover:text-brand-green" : "text-gray-400 hover:text-brand-green"}`}
+              isDarkNav ? "hover:bg-white/5" : "hover:bg-gray-50"
+            } ${isDarkNav ? "text-white/50 hover:text-brand-green" : "text-gray-400 hover:text-brand-green"}`}
             type="button"
           >
             <i className="fa-solid fa-right-from-bracket text-xl mb-1" />
@@ -84,7 +91,7 @@ export default function Navbar() {
           <Link
             to="/login"
             className={`flex flex-col items-center justify-center transition-colors ${
-              isHome ? "hover:bg-white/5" : "hover:bg-gray-50"
+              isDarkNav ? "hover:bg-white/5" : "hover:bg-gray-50"
             } ${isActive("/login")}`}
           >
             <i className="fa-solid fa-right-to-bracket text-xl mb-1" />

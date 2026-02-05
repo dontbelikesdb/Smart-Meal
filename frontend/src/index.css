@@ -40,6 +40,13 @@
     transform: translateY(0);
   }
 }
+
+ html,
+ body,
+ #root {
+   height: 100%;
+   background-color: rgb(2 6 23);
+ }
 /*body {
   background-color: red;
 }*/

@@ -241,6 +241,7 @@ def seed_recipes(
             category = row.get("RecipeCategory") or ""
             keywords = " ".join(_parse_c_list(row.get("Keywords")))
             ingredient_parts = _parse_c_list(row.get("RecipeIngredientParts"))
+            ingredient_quantities = _parse_c_list(row.get("RecipeIngredientQuantities"))
 
             cuisine_type = _guess_cuisine(category, keywords)
             is_vegetarian = _classify_is_vegetarian(
@@ -321,7 +322,7 @@ def seed_recipes(
                         .filter(RecipeIngredient.recipe_id == recipe_id)
                         .all()
                     }
-                for part in ingredient_parts:
+                for idx, part in enumerate(ingredient_parts):
                     try:
                         ing_id = _get_or_create_ingredient(db, ing_cache, part)
                     except ValueError:
@@ -330,12 +331,17 @@ def seed_recipes(
                     if ing_id in existing_links:
                         continue
 
+                    qty_note = None
+                    if idx < len(ingredient_quantities):
+                        qv = (ingredient_quantities[idx] or "").strip()
+                        if qv and qv.upper() != "NA":
+                            qty_note = qv
                     db.add(
                         RecipeIngredient(
                             recipe_id=recipe_id,
                             ingredient_id=ing_id,
                             quantity=1.0,
-                            notes=None,
+                            notes=qty_note,
                         )
                     )
                     ingredient_links += 1

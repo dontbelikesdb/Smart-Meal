@@ -12,6 +12,8 @@ const _diets = [
   { label: "Vegetarian", icon: "fa-carrot", query: "vegetarian" },
 ];
 
+const _SEARCH_CACHE_KEY = "smartmeal_last_search_v1";
+
 export default function GeneratePlan() {
   const navigate = useNavigate();
   const currentUser = getCurrentUser();
@@ -23,12 +25,27 @@ export default function GeneratePlan() {
   const [loading, setLoading] = useState(false);
   const [activeDiet, setActiveDiet] = useState(null);
   const [favorites, setFavorites] = useState([]);
+  const [expandedMealId, setExpandedMealId] = useState(null);
 
   useEffect(() => {
     if (!currentUser) {
       navigate("/login", { replace: true });
     }
   }, [currentUser, navigate]);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(_SEARCH_CACHE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        if (typeof parsed.query === "string") setQuery(parsed.query);
+        if (Array.isArray(parsed.results)) setResults(parsed.results);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   /* --------------------------------------------------
      Search logic
@@ -51,13 +68,43 @@ export default function GeneratePlan() {
       const mapped = rows.map((r) => ({
         id: r.id,
         title: r.name,
+        description: r.description ?? null,
         calories: r.calories,
         reasons: r.reasons || [],
         tags: (r.reasons || []).slice(0, 3),
         imageUrl:
-          r.image_url || r.imageUrl || r.image || r.image_path || r.photo || null,
+          r.image_url ||
+          r.imageUrl ||
+          r.image ||
+          r.image_path ||
+          r.photo ||
+          null,
+        prepTime: r.prep_time ?? r.prepTime ?? null,
+        cookTime: r.cook_time ?? r.cookTime ?? null,
+        totalTime: r.total_time ?? r.totalTime ?? null,
+        servings: r.servings ?? null,
+        cuisineType: r.cuisine_type ?? r.cuisineType ?? null,
+        proteinG: r.protein_g ?? r.proteinG ?? null,
+        carbsG: r.carbs_g ?? r.carbsG ?? null,
+        fatG: r.fat_g ?? r.fatG ?? null,
+        fiberG: r.fiber_g ?? r.fiberG ?? null,
+        sugarG: r.sugar_g ?? r.sugarG ?? null,
+        sodiumMg: r.sodium_mg ?? r.sodiumMg ?? null,
+        ingredientLines: Array.isArray(r.ingredient_lines)
+          ? r.ingredient_lines
+          : [],
+        ingredients: Array.isArray(r.ingredients) ? r.ingredients : [],
+        instructions: r.instructions ?? null,
       }));
       setResults(mapped);
+      try {
+        sessionStorage.setItem(
+          _SEARCH_CACHE_KEY,
+          JSON.stringify({ query: q, results: mapped }),
+        );
+      } catch {
+        // ignore
+      }
     } catch (e) {
       const msg = e?.response?.data?.detail || e?.message || "Search failed";
       alert(String(msg));
@@ -78,8 +125,29 @@ export default function GeneratePlan() {
     }
   };
 
+  const openRecipe = (mealId) => {
+    setExpandedMealId(mealId);
+  };
+
+  const closeRecipe = () => {
+    setExpandedMealId(null);
+  };
+
+  const expandedMeal = expandedMealId
+    ? results.find((m) => m.id === expandedMealId) || null
+    : null;
+
+  useEffect(() => {
+    if (!expandedMealId) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") closeRecipe();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [expandedMealId]);
+
   /* --------------------------------------------------
-     Save (APPEND) & go to plan page ✅
+     Save (APPEND) & go to plan page 
   -------------------------------------------------- */
   const goToPlan = () => {
     if (!currentUser?.email) {
@@ -94,10 +162,10 @@ export default function GeneratePlan() {
 
     const key = `mealplan_${currentUser.email}`;
 
-    // 👇 read existing plan
+    // read existing plan
     const existingPlan = JSON.parse(localStorage.getItem(key)) || [];
 
-    // 👇 merge without duplicates
+    // merge without duplicates
     const mergedPlan = [
       ...existingPlan,
       ...selectedMeals.filter(
@@ -118,14 +186,18 @@ export default function GeneratePlan() {
 
   const getBadge = (meal) => {
     const text = (meal?.reasons || []).join(" ").toLowerCase();
-    if (text.includes("low carb")) return { label: "Low Carb", cls: "bg-green-500/90" };
+    if (text.includes("low carb"))
+      return { label: "Low Carb", cls: "bg-green-500/90" };
     if (text.includes("high protein"))
       return { label: "High Protein", cls: "bg-orange-500/90" };
     if (text.includes("vegetarian"))
       return { label: "Vegetarian", cls: "bg-blue-500/90" };
-    if (text.includes("vegan")) return { label: "Vegan", cls: "bg-emerald-500/90" };
-    if (text.includes("keto")) return { label: "Keto", cls: "bg-purple-500/90" };
-    if (text.includes("paleo")) return { label: "Paleo", cls: "bg-orange-500/90" };
+    if (text.includes("vegan"))
+      return { label: "Vegan", cls: "bg-emerald-500/90" };
+    if (text.includes("keto"))
+      return { label: "Keto", cls: "bg-purple-500/90" };
+    if (text.includes("paleo"))
+      return { label: "Paleo", cls: "bg-orange-500/90" };
     if (text.includes("gluten"))
       return { label: "Gluten-Free", cls: "bg-amber-500/90" };
     return null;
@@ -133,7 +205,9 @@ export default function GeneratePlan() {
 
   const toggleFavorite = (mealId) => {
     setFavorites((prev) =>
-      prev.includes(mealId) ? prev.filter((id) => id !== mealId) : [...prev, mealId],
+      prev.includes(mealId)
+        ? prev.filter((id) => id !== mealId)
+        : [...prev, mealId],
     );
   };
 
@@ -267,11 +341,11 @@ export default function GeneratePlan() {
                   className={`group relative rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer ${
                     added ? "ring-2 ring-brand-green" : ""
                   }`}
-                  onClick={() => toggleMeal(meal)}
+                  onClick={() => openRecipe(meal.id)}
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") toggleMeal(meal);
+                    if (e.key === "Enter") openRecipe(meal.id);
                   }}
                 >
                   {meal.imageUrl ? (
@@ -297,7 +371,11 @@ export default function GeneratePlan() {
                     }}
                     aria-label={fav ? "Unfavorite" : "Favorite"}
                   >
-                    <i className={fav ? "fa-solid fa-heart" : "fa-regular fa-heart"} />
+                    <i
+                      className={
+                        fav ? "fa-solid fa-heart" : "fa-regular fa-heart"
+                      }
+                    />
                   </button>
 
                   <div className="absolute bottom-5 left-5 right-5">
@@ -307,6 +385,25 @@ export default function GeneratePlan() {
                       </h3>
                       <span className="text-white/80 text-sm font-semibold whitespace-nowrap">
                         {meal.calories ?? "—"} kcal
+                      </span>
+                    </div>
+
+                    <div className="mt-2 flex items-center gap-2 text-xs text-white/70">
+                      {typeof meal.prepTime === "number" && (
+                        <span className="inline-flex items-center gap-2 px-2 py-1 rounded-lg bg-white/10">
+                          <i className="fa-regular fa-clock" /> Prep{" "}
+                          {meal.prepTime}m
+                        </span>
+                      )}
+                      {typeof meal.cookTime === "number" && (
+                        <span className="inline-flex items-center gap-2 px-2 py-1 rounded-lg bg-white/10">
+                          <i className="fa-solid fa-fire" /> Cook{" "}
+                          {meal.cookTime}m
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-2 px-2 py-1 rounded-lg bg-white/10">
+                        <i className="fa-solid fa-chevron-down" />
+                        View
                       </span>
                     </div>
 
@@ -323,15 +420,26 @@ export default function GeneratePlan() {
                         </span>
                       )}
 
-                      {added ? (
-                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-brand-green text-white text-xs font-bold">
-                          <i className="fa-solid fa-check" /> Added
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-white/10 text-white text-xs font-bold">
-                          <i className="fa-solid fa-plus" /> Add
-                        </span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleMeal(meal);
+                        }}
+                        className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                          added
+                            ? "bg-brand-green text-white"
+                            : "bg-white/10 text-white hover:bg-white/20"
+                        }`}
+                        aria-label={added ? "Remove from plan" : "Add to plan"}
+                      >
+                        <i
+                          className={
+                            added ? "fa-solid fa-check" : "fa-solid fa-plus"
+                          }
+                        />
+                        {added ? "Added" : "Add"}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -361,6 +469,235 @@ export default function GeneratePlan() {
         >
           View Plan ({selectedMeals.length})
         </button>
+      )}
+
+      {expandedMeal && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          onClick={closeRecipe}
+        >
+          <div
+            className="absolute inset-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="h-full w-full overflow-hidden">
+              <div className="h-full w-full bg-slate-950 text-white">
+                <div className="relative h-64 sm:h-80">
+                  {expandedMeal.imageUrl ? (
+                    <img
+                      alt={expandedMeal.title}
+                      src={expandedMeal.imageUrl}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-black" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-black/40 to-black/20" />
+
+                  <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      className="w-11 h-11 rounded-2xl bg-white/10 border border-white/10 backdrop-blur-md flex items-center justify-center"
+                      onClick={closeRecipe}
+                      aria-label="Close"
+                    >
+                      <i className="fa-solid fa-arrow-left" />
+                    </button>
+
+                    <button
+                      type="button"
+                      className="w-11 h-11 rounded-2xl bg-white/10 border border-white/10 backdrop-blur-md flex items-center justify-center"
+                      onClick={() => toggleFavorite(expandedMeal.id)}
+                      aria-label={
+                        favorites.includes(expandedMeal.id)
+                          ? "Unfavorite"
+                          : "Favorite"
+                      }
+                    >
+                      <i
+                        className={
+                          favorites.includes(expandedMeal.id)
+                            ? "fa-solid fa-heart"
+                            : "fa-regular fa-heart"
+                        }
+                      />
+                    </button>
+                  </div>
+
+                  <div className="absolute bottom-5 left-5 right-5">
+                    <h2 className="text-2xl sm:text-3xl font-serif font-bold leading-tight">
+                      {expandedMeal.title}
+                    </h2>
+                    {expandedMeal.description && (
+                      <p className="mt-2 text-white/70 text-sm sm:text-base line-clamp-3">
+                        {expandedMeal.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="h-[calc(100%-16rem)] sm:h-[calc(100%-20rem)] overflow-auto pb-28">
+                  <div className="p-5 max-w-4xl mx-auto">
+                    <div className="flex flex-wrap gap-2 text-xs text-white/80">
+                      {typeof expandedMeal.prepTime === "number" && (
+                        <span className="px-3 py-2 rounded-2xl bg-white/5 border border-white/10">
+                          Prep: {expandedMeal.prepTime} min
+                        </span>
+                      )}
+                      {typeof expandedMeal.cookTime === "number" && (
+                        <span className="px-3 py-2 rounded-2xl bg-white/5 border border-white/10">
+                          Cook: {expandedMeal.cookTime} min
+                        </span>
+                      )}
+                      {typeof expandedMeal.totalTime === "number" && (
+                        <span className="px-3 py-2 rounded-2xl bg-white/5 border border-white/10">
+                          Total: {expandedMeal.totalTime} min
+                        </span>
+                      )}
+                      {typeof expandedMeal.servings === "number" && (
+                        <span className="px-3 py-2 rounded-2xl bg-white/5 border border-white/10">
+                          Servings: {expandedMeal.servings}
+                        </span>
+                      )}
+                      {expandedMeal.cuisineType && (
+                        <span className="px-3 py-2 rounded-2xl bg-white/5 border border-white/10 capitalize">
+                          Cuisine: {expandedMeal.cuisineType}
+                        </span>
+                      )}
+                      <span className="px-3 py-2 rounded-2xl bg-white/5 border border-white/10">
+                        Calories: {expandedMeal.calories ?? "—"}
+                      </span>
+                    </div>
+
+                    {(expandedMeal.proteinG != null ||
+                      expandedMeal.carbsG != null ||
+                      expandedMeal.fatG != null) && (
+                      <div className="mt-5 bg-white/5 border border-white/10 rounded-3xl p-4">
+                        <div className="text-white font-bold mb-3">
+                          Nutrition
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm text-white/80">
+                          {expandedMeal.proteinG != null && (
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+                              <div className="text-white/60 text-xs">
+                                Protein
+                              </div>
+                              <div className="text-white font-bold">
+                                {Number(expandedMeal.proteinG).toFixed(1)} g
+                              </div>
+                            </div>
+                          )}
+                          {expandedMeal.carbsG != null && (
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+                              <div className="text-white/60 text-xs">Carbs</div>
+                              <div className="text-white font-bold">
+                                {Number(expandedMeal.carbsG).toFixed(1)} g
+                              </div>
+                            </div>
+                          )}
+                          {expandedMeal.fatG != null && (
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+                              <div className="text-white/60 text-xs">Fat</div>
+                              <div className="text-white font-bold">
+                                {Number(expandedMeal.fatG).toFixed(1)} g
+                              </div>
+                            </div>
+                          )}
+                          {expandedMeal.fiberG != null && (
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+                              <div className="text-white/60 text-xs">Fiber</div>
+                              <div className="text-white font-bold">
+                                {Number(expandedMeal.fiberG).toFixed(1)} g
+                              </div>
+                            </div>
+                          )}
+                          {expandedMeal.sugarG != null && (
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+                              <div className="text-white/60 text-xs">Sugar</div>
+                              <div className="text-white font-bold">
+                                {Number(expandedMeal.sugarG).toFixed(1)} g
+                              </div>
+                            </div>
+                          )}
+                          {expandedMeal.sodiumMg != null && (
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+                              <div className="text-white/60 text-xs">
+                                Sodium
+                              </div>
+                              <div className="text-white font-bold">
+                                {Number(expandedMeal.sodiumMg).toFixed(0)} mg
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {(expandedMeal.ingredientLines?.length > 0 ||
+                      expandedMeal.ingredients?.length > 0) && (
+                      <div className="mt-6">
+                        <div className="text-white font-bold mb-3">
+                          Ingredients
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-white/80">
+                          {(expandedMeal.ingredientLines?.length > 0
+                            ? expandedMeal.ingredientLines
+                            : expandedMeal.ingredients
+                          ).map((ing, idx) => (
+                            <div
+                              key={`${expandedMeal.id}-modal-ing-${idx}`}
+                              className="bg-white/5 border border-white/10 rounded-2xl px-3 py-2"
+                            >
+                              {ing}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {expandedMeal.instructions && (
+                      <div className="mt-6">
+                        <div className="text-white font-bold mb-3">
+                          Instructions
+                        </div>
+                        <div className="text-sm text-white/80 whitespace-pre-line bg-white/5 border border-white/10 rounded-3xl p-4">
+                          {expandedMeal.instructions}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="fixed left-0 right-0 bottom-0 z-[61] p-4 safe-area-pb bg-slate-950/70 backdrop-blur border-t border-white/10">
+                  <div className="max-w-4xl mx-auto flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={closeRecipe}
+                      className="flex-1 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold"
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleMeal(expandedMeal)}
+                      className={`flex-1 py-3 rounded-2xl font-bold transition-colors ${
+                        selectedMeals.some((m) => m.id === expandedMeal.id)
+                          ? "bg-brand-green text-white"
+                          : "bg-brand-green text-white hover:bg-green-700"
+                      }`}
+                    >
+                      {selectedMeals.some((m) => m.id === expandedMeal.id)
+                        ? "Added to Plan"
+                        : "Add to Plan"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

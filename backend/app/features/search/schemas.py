@@ -31,7 +31,23 @@ class ParsedQuery(BaseModel):
 class RecipeResult(BaseModel):
     id: int
     name: str
+    description: Optional[str] = None
     calories: Optional[float] = None
+    image_url: Optional[str] = None
+    prep_time: Optional[int] = None
+    cook_time: Optional[int] = None
+    total_time: Optional[int] = None
+    servings: Optional[int] = None
+    cuisine_type: Optional[str] = None
+    protein_g: Optional[float] = None
+    carbs_g: Optional[float] = None
+    fat_g: Optional[float] = None
+    fiber_g: Optional[float] = None
+    sugar_g: Optional[float] = None
+    sodium_mg: Optional[float] = None
+    ingredient_lines: List[str] = []
+    ingredients: List[str] = []
+    instructions: Optional[str] = None
     reasons: List[str] = []
 
 

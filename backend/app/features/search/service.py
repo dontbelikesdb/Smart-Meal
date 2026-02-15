@@ -4,7 +4,7 @@ import re
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import settings
 from app.models.allergy import Allergy, UserAllergy
@@ -517,6 +517,9 @@ def _build_base_recipe_query(db: Session):
     return (
         db.query(Recipe, RecipeNutritionalInfo)
         .outerjoin(RecipeNutritionalInfo, RecipeNutritionalInfo.recipe_id == Recipe.id)
+        .options(
+            selectinload(Recipe.ingredients).selectinload(RecipeIngredient.ingredient)
+        )
     )
 
 
@@ -533,7 +536,53 @@ def _fetch_results(db_query, limit: int) -> List[RecipeResult]:
                 reasons.append(f"protein_g={float(nut.protein_g):.1f}")
             if nut.carbs_g is not None:
                 reasons.append(f"carbs_g={float(nut.carbs_g):.1f}")
-        out.append(RecipeResult(id=recipe.id, name=recipe.name, calories=calories, reasons=reasons))
+
+        ingredients: List[str] = []
+        ingredient_lines: List[str] = []
+        try:
+            for ri in recipe.ingredients or []:
+                if ri.ingredient is not None and ri.ingredient.name:
+                    ingredients.append(ri.ingredient.name)
+                    qty = (ri.notes or "").strip() if getattr(ri, "notes", None) else ""
+                    ingredient_lines.append(f"{qty} {ri.ingredient.name}".strip())
+        except Exception:
+            ingredients = []
+            ingredient_lines = []
+
+        prep_time = recipe.prep_time
+        cook_time = recipe.cook_time
+        total_time = None
+        if isinstance(prep_time, int) and isinstance(cook_time, int):
+            total_time = prep_time + cook_time
+        elif isinstance(prep_time, int):
+            total_time = prep_time
+        elif isinstance(cook_time, int):
+            total_time = cook_time
+
+        out.append(
+            RecipeResult(
+                id=recipe.id,
+                name=recipe.name,
+                description=recipe.description,
+                calories=calories,
+                image_url=recipe.image_url,
+                prep_time=prep_time,
+                cook_time=cook_time,
+                total_time=total_time,
+                servings=recipe.servings,
+                cuisine_type=(recipe.cuisine_type.value if recipe.cuisine_type is not None else None),
+                protein_g=(float(nut.protein_g) if nut is not None and nut.protein_g is not None else None),
+                carbs_g=(float(nut.carbs_g) if nut is not None and nut.carbs_g is not None else None),
+                fat_g=(float(nut.fat_g) if nut is not None and nut.fat_g is not None else None),
+                fiber_g=(float(nut.fiber_g) if nut is not None and nut.fiber_g is not None else None),
+                sugar_g=(float(nut.sugar_g) if nut is not None and nut.sugar_g is not None else None),
+                sodium_mg=(float(nut.sodium_mg) if nut is not None and nut.sodium_mg is not None else None),
+                ingredient_lines=ingredient_lines,
+                ingredients=ingredients,
+                instructions=recipe.instructions,
+                reasons=reasons,
+            )
+        )
     return out
 
 
@@ -595,7 +644,53 @@ def _fetch_ranked_results(db_query, limit: int, terms: List[str]) -> List[Recipe
                 reasons.append(f"protein_g={float(nut.protein_g):.1f}")
             if nut.carbs_g is not None:
                 reasons.append(f"carbs_g={float(nut.carbs_g):.1f}")
-        out.append(RecipeResult(id=recipe.id, name=recipe.name, calories=calories, reasons=reasons))
+
+        ingredients: List[str] = []
+        ingredient_lines: List[str] = []
+        try:
+            for ri in recipe.ingredients or []:
+                if ri.ingredient is not None and ri.ingredient.name:
+                    ingredients.append(ri.ingredient.name)
+                    qty = (ri.notes or "").strip() if getattr(ri, "notes", None) else ""
+                    ingredient_lines.append(f"{qty} {ri.ingredient.name}".strip())
+        except Exception:
+            ingredients = []
+            ingredient_lines = []
+
+        prep_time = recipe.prep_time
+        cook_time = recipe.cook_time
+        total_time = None
+        if isinstance(prep_time, int) and isinstance(cook_time, int):
+            total_time = prep_time + cook_time
+        elif isinstance(prep_time, int):
+            total_time = prep_time
+        elif isinstance(cook_time, int):
+            total_time = cook_time
+
+        out.append(
+            RecipeResult(
+                id=recipe.id,
+                name=recipe.name,
+                description=recipe.description,
+                calories=calories,
+                image_url=recipe.image_url,
+                prep_time=prep_time,
+                cook_time=cook_time,
+                total_time=total_time,
+                servings=recipe.servings,
+                cuisine_type=(recipe.cuisine_type.value if recipe.cuisine_type is not None else None),
+                protein_g=(float(nut.protein_g) if nut is not None and nut.protein_g is not None else None),
+                carbs_g=(float(nut.carbs_g) if nut is not None and nut.carbs_g is not None else None),
+                fat_g=(float(nut.fat_g) if nut is not None and nut.fat_g is not None else None),
+                fiber_g=(float(nut.fiber_g) if nut is not None and nut.fiber_g is not None else None),
+                sugar_g=(float(nut.sugar_g) if nut is not None and nut.sugar_g is not None else None),
+                sodium_mg=(float(nut.sodium_mg) if nut is not None and nut.sodium_mg is not None else None),
+                ingredient_lines=ingredient_lines,
+                ingredients=ingredients,
+                instructions=recipe.instructions,
+                reasons=reasons,
+            )
+        )
 
     return out
 

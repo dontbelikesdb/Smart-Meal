@@ -7,8 +7,8 @@ const _fallbackImage =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuDu7F1GZildoPkQwlmkdCrVYHPKjK5xrJ1P7I88EPD4jgKyV7EL8wCH2-q-UzBOb4HZfVWXqOssKBorvvmaR-pB_Et6QZcfchxNhMUDt7mRB8uew2CwYiGFnnrvdOUe7la1ezB7OgmdSmv9du81bCB_fdfIb-uo0PYV-4AUbB9WhVCHtKDeIo51DidymHAZgwdihPQoSwOTHoKfb56NJ5jmFJ9e00TqKt44AgUq2aOORYlbn49DlzmGgBJEdZ57ci9ZPOYlejxvfRZ3";
 
 const _getMealImage = (meal) =>
-  meal?.image_url ||
   meal?.imageUrl ||
+  meal?.image_url ||
   meal?.image ||
   meal?.image_path ||
   meal?.photo ||

@@ -328,14 +328,26 @@ def seed_recipes(
                     except ValueError:
                         continue
 
-                    if ing_id in existing_links:
-                        continue
-
                     qty_note = None
                     if idx < len(ingredient_quantities):
                         qv = (ingredient_quantities[idx] or "").strip()
                         if qv and qv.upper() != "NA":
                             qty_note = qv
+
+                    if ing_id in existing_links:
+                        if backfill_ingredients and qty_note:
+                            link = (
+                                db.query(RecipeIngredient)
+                                .filter(
+                                    RecipeIngredient.recipe_id == recipe_id,
+                                    RecipeIngredient.ingredient_id == ing_id,
+                                )
+                                .first()
+                            )
+                            if link is not None and (link.notes is None or not str(link.notes).strip()):
+                                link.notes = qty_note
+                                ops += 1
+                        continue
                     db.add(
                         RecipeIngredient(
                             recipe_id=recipe_id,

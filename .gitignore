@@ -16,3 +16,6 @@ Thumbs.db
 .env
 .env.local
 .env.prod
+
+# Data
+data/raw/recipes.csv

@@ -2,7 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { listAllergies } from "../api/allergiesApi";
-import { getMyAllergies, saveProfile, setMyAllergies } from "../api/profileApi";
+import {
+  getMyAllergies,
+  saveProfile,
+  setMyAllergies,
+  getMyProfile,
+} from "../api/profileApi";
 import { getCurrentUser } from "../utils/auth";
 
 export default function ProfileForm() {
@@ -36,46 +41,70 @@ export default function ProfileForm() {
       return;
     }
 
-    const savedProfile = localStorage.getItem(`profile_${user.email}`);
-    if (savedProfile) {
-      const parsed = JSON.parse(savedProfile);
-      setProfileExists(true);
-      setForm({
-        ...form,
-        ...parsed,
-        allergies: Array.isArray(parsed.allergies)
-          ? parsed.allergies.join(", ")
-          : "",
-        vegetarian:
-          parsed.dietary_restrictions?.includes("vegetarian") || false,
-        diabetic:
-          parsed.dietary_restrictions?.includes("diabetic") || false,
-        pregnant:
-          parsed.dietary_restrictions?.includes("pregnant") || false,
-      });
-    } else {
-      setEditMode(true);
-    }
-
     (async () => {
       try {
-        const [allergiesResp, mineResp] = await Promise.all([
+        const [profileResp, allergiesResp, mineResp] = await Promise.all([
+          getMyProfile(),
           listAllergies(),
           getMyAllergies(),
         ]);
 
+        const profileData = profileResp?.data || {};
         const all = allergiesResp?.data || [];
         const mine = mineResp?.data?.allergy_ids || [];
 
         const idToName = new Map(all.map((a) => [a.id, a.name]));
-        const selectedNames = mine.map((id) => idToName.get(id)).filter(Boolean);
+        const selectedNames = mine
+          .map((id) => idToName.get(id))
+          .filter(Boolean);
 
         setForm((prev) => ({
           ...prev,
-          allergies: selectedNames.length ? selectedNames.join(", ") : prev.allergies,
+          name: profileData.name || prev.name,
+          age: profileData.age ?? prev.age,
+          gender: profileData.gender ?? prev.gender,
+          height_cm: profileData.height_cm ?? prev.height_cm,
+          weight_kg: profileData.weight_kg ?? prev.weight_kg,
+          activity_level: profileData.activity_level ?? prev.activity_level,
+          fitness_goal: profileData.fitness_goal ?? prev.fitness_goal,
+          bmi: profileData.bmi ?? prev.bmi,
+          allergies: selectedNames.length
+            ? selectedNames.join(", ")
+            : prev.allergies,
+          vegetarian: (profileData.dietary_restrictions || []).includes(
+            "vegetarian",
+          ),
+          diabetic: (profileData.dietary_restrictions || []).includes(
+            "diabetic",
+          ),
+          pregnant: (profileData.dietary_restrictions || []).includes(
+            "pregnant",
+          ),
         }));
+
+        setProfileExists(true);
       } catch {
-        // ignore
+        // ignore; fall back to localStorage for legacy compatibility
+        const savedProfile = localStorage.getItem(`profile_${user.email}`);
+        if (savedProfile) {
+          const parsed = JSON.parse(savedProfile);
+          setProfileExists(true);
+          setForm({
+            ...form,
+            ...parsed,
+            allergies: Array.isArray(parsed.allergies)
+              ? parsed.allergies.join(", ")
+              : "",
+            vegetarian:
+              parsed.dietary_restrictions?.includes("vegetarian") || false,
+            diabetic:
+              parsed.dietary_restrictions?.includes("diabetic") || false,
+            pregnant:
+              parsed.dietary_restrictions?.includes("pregnant") || false,
+          });
+        } else {
+          setEditMode(true);
+        }
       }
     })();
     // eslint-disable-next-line
@@ -119,20 +148,35 @@ export default function ProfileForm() {
         gender: profile.gender,
         height_cm: profile.height_cm,
         weight_kg: profile.weight_kg,
+        dietary_restrictions: profile.dietary_restrictions,
+        fitness_goal: profile.fitness_goal,
       });
 
       const allergiesResp = await listAllergies();
       const all = allergiesResp?.data || [];
-      const nameToId = new Map(all.map((a) => [String(a.name || "").toLowerCase().trim(), a.id]));
+      const nameToId = new Map(
+        all.map((a) => [
+          String(a.name || "")
+            .toLowerCase()
+            .trim(),
+          a.id,
+        ]),
+      );
 
       const entered = (profile.allergies || [])
-        .map((x) => String(x || "").toLowerCase().trim())
+        .map((x) =>
+          String(x || "")
+            .toLowerCase()
+            .trim(),
+        )
         .filter(Boolean);
 
       const ids = [];
       const unknown = [];
       for (const n of entered) {
-        const id = nameToId.get(n) || (n.endsWith("s") ? nameToId.get(n.slice(0, -1)) : undefined);
+        const id =
+          nameToId.get(n) ||
+          (n.endsWith("s") ? nameToId.get(n.slice(0, -1)) : undefined);
         if (id) ids.push(id);
         else unknown.push(n);
       }
@@ -150,7 +194,8 @@ export default function ProfileForm() {
       setEditMode(false);
       setTimeout(() => setSaved(false), 1500);
     } catch (e) {
-      const msg = e?.response?.data?.detail || e?.message || "Failed to save profile";
+      const msg =
+        e?.response?.data?.detail || e?.message || "Failed to save profile";
       alert(String(msg));
     } finally {
       setSaving(false);
@@ -228,9 +273,21 @@ export default function ProfileForm() {
 
           <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Metric label="Age" value={form.age} icon="fa-calendar-day" />
-            <Metric label="BMI" value={form.bmi || "—"} icon="fa-weight-scale" />
-            <Metric label="Height" value={`${form.height_cm} cm`} icon="fa-ruler-vertical" />
-            <Metric label="Weight" value={`${form.weight_kg} kg`} icon="fa-dumbbell" />
+            <Metric
+              label="BMI"
+              value={form.bmi || "—"}
+              icon="fa-weight-scale"
+            />
+            <Metric
+              label="Height"
+              value={`${form.height_cm} cm`}
+              icon="fa-ruler-vertical"
+            />
+            <Metric
+              label="Weight"
+              value={`${form.weight_kg} kg`}
+              icon="fa-dumbbell"
+            />
 
             <Info
               label="Activity Level"
@@ -350,7 +407,9 @@ export default function ProfileForm() {
           <select
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-brand-green text-white"
             value={form.activity_level}
-            onChange={(e) => setForm({ ...form, activity_level: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, activity_level: e.target.value })
+            }
           >
             <option value="sedentary" className="bg-slate-900">
               Sedentary

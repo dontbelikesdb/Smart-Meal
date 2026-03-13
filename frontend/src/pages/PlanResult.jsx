@@ -172,6 +172,25 @@ export default function PlanResult() {
                         <i className="fa-solid fa-fire-flame-curved text-orange-400 mr-2" />
                         <span>{meal.calories ?? "—"} kcal</span>
                       </div>
+
+                      {(meal.ingredientLines?.length > 0 ||
+                        meal.ingredients?.length > 0) && (
+                        <div className="mt-3 text-xs text-white/70 space-y-1">
+                          {(meal.ingredientLines?.length > 0
+                            ? meal.ingredientLines
+                            : meal.ingredients
+                          )
+                            .slice(0, 3)
+                            .map((ing, idx) => (
+                              <div
+                                key={`${meal.id}-plan-card-ing-${idx}`}
+                                className="truncate"
+                              >
+                                {ing}
+                              </div>
+                            ))}
+                        </div>
+                      )}
                     </div>
                     <button
                       type="button"

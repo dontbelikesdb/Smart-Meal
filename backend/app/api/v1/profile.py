@@ -36,6 +36,27 @@ def save_profile(
     return {"message": "profile saved", "user_id": current_user.id, "profile_id": profile.id}
 
 
+@router.get("/", response_model=Dict[str, Any])
+def get_my_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Dict[str, Any]:
+    profile = (
+        db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+    )
+    if profile is None:
+        return {}
+    return {
+        "age": profile.age,
+        "gender": profile.gender,
+        "height_cm": profile.height_cm,
+        "weight_kg": profile.weight_kg,
+        "bmi": profile.bmi,
+        "dietary_restrictions": profile.dietary_restrictions or [],
+        "fitness_goal": getattr(profile, "fitness_goal", None),
+    }
+
+
 @router.get("/allergies", response_model=UserAllergySet)
 def get_my_allergies(
     db: Session = Depends(get_db),

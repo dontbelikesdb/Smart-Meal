@@ -1,0 +1,130 @@
+{
+  "name": "Meal Planner Backend API Test Plan",
+  "version": "1.0.0",
+  "baseUrl": "http://127.0.0.1:8000",
+  "apiPrefix": "/api/v1",
+  "credentials": {
+    "email": "admin@example.com",
+    "password": "Admin123"
+  },
+  "priorities": [
+    "health",
+    "auth",
+    "core-protected-routes",
+    "negative-cases"
+  ],
+  "testSuites": [
+    {
+      "id": "TS-BE-HEALTH",
+      "title": "Health and API availability",
+      "priority": "P0",
+      "cases": [
+        {
+          "id": "TC001",
+          "title": "Root endpoint returns welcome payload",
+          "method": "GET",
+          "path": "/",
+          "expectedStatus": 200
+        },
+        {
+          "id": "TC002",
+          "title": "OpenAPI spec is available under API prefix",
+          "method": "GET",
+          "path": "/api/v1/openapi.json",
+          "expectedStatus": 200
+        }
+      ]
+    },
+    {
+      "id": "TS-BE-AUTH",
+      "title": "Authentication",
+      "priority": "P0",
+      "cases": [
+        {
+          "id": "TC003",
+          "title": "Login succeeds with provided admin credentials",
+          "method": "POST",
+          "path": "/api/v1/auth/login/access-token",
+          "expectedStatus": 200
+        },
+        {
+          "id": "TC004",
+          "title": "Token introspection succeeds for valid bearer token",
+          "method": "POST",
+          "path": "/api/v1/auth/login/test-token",
+          "expectedStatus": 200
+        },
+        {
+          "id": "TC005",
+          "title": "Login fails with invalid password",
+          "method": "POST",
+          "path": "/api/v1/auth/login/access-token",
+          "expectedStatus": 400
+        },
+        {
+          "id": "TC006",
+          "title": "Protected endpoint rejects missing bearer token",
+          "method": "POST",
+          "path": "/api/v1/auth/login/test-token",
+          "expectedStatus": 401
+        }
+      ]
+    },
+    {
+      "id": "TS-BE-PROTECTED",
+      "title": "Protected route smoke tests",
+      "priority": "P1",
+      "cases": [
+        {
+          "id": "TC007",
+          "title": "Read current user profile via /users/me",
+          "method": "GET",
+          "path": "/api/v1/users/me",
+          "expectedStatus": 200
+        },
+        {
+          "id": "TC008",
+          "title": "List allergies for authenticated user",
+          "method": "GET",
+          "path": "/api/v1/allergies/",
+          "expectedStatus": 200
+        },
+        {
+          "id": "TC009",
+          "title": "Generate plan endpoint returns pending status",
+          "method": "POST",
+          "path": "/api/v1/plan/generate",
+          "expectedStatus": 200
+        },
+        {
+          "id": "TC010",
+          "title": "Search recipes endpoint returns list",
+          "method": "GET",
+          "path": "/api/v1/search/recipes",
+          "expectedStatus": 200
+        }
+      ]
+    },
+    {
+      "id": "TS-BE-NEGATIVE",
+      "title": "Negative and validation checks",
+      "priority": "P1",
+      "cases": [
+        {
+          "id": "TC011",
+          "title": "Set profile allergies with unknown allergy id fails",
+          "method": "POST",
+          "path": "/api/v1/profile/allergies",
+          "expectedStatus": 404
+        },
+        {
+          "id": "TC012",
+          "title": "Search NL request fails for empty query",
+          "method": "POST",
+          "path": "/api/v1/search/nl",
+          "expectedStatus": 422
+        }
+      ]
+    }
+  ]
+}

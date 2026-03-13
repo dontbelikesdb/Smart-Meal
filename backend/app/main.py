@@ -63,6 +63,7 @@ def _ensure_default_allergies() -> None:
     default_allergies: list[tuple[str, str | None]] = [
         ("milk", "Dairy / milk proteins"),
         ("egg", "Eggs and egg products"),
+        ("chicken", "Chicken and chicken products"),
         ("peanut", "Peanuts and peanut products"),
         ("tree nut", "Almonds, cashews, walnuts, etc."),
         ("soy", "Soybeans and soy products"),
@@ -76,6 +77,7 @@ def _ensure_default_allergies() -> None:
     aliases: dict[str, list[str]] = {
         "milk": ["milk", "dairy", "cheese", "butter", "cream", "yogurt"],
         "egg": ["egg", "eggs"],
+        "chicken": ["chicken", "chicken breast", "chicken thighs", "chicken thigh"],
         "peanut": ["peanut", "peanuts", "peanut butter"],
         "tree nut": [
             "tree nut",

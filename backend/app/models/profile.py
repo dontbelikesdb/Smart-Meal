@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, Float, String, Boolean, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
@@ -22,5 +22,6 @@ class UserProfile(Base):
     alcohol_consumption = Column(Boolean)
     smoking_habit = Column(Boolean)
     dietary_habits = Column(String)  # Vegetarian, Vegan, Keto, etc.
+    dietary_restrictions = Column(JSON, nullable=True, default=list)  # e.g. ["vegetarian","diabetic","pregnant"]
     preferred_cuisine = Column(String)
     food_aversions = Column(String, nullable=True)

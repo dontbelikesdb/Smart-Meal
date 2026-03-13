@@ -19,3 +19,6 @@ Thumbs.db
 
 # Data
 data/raw/recipes.csv
+
+# TestSprite generated runtime artifacts (can include temporary credentials)
+testsprite_tests/tmp/

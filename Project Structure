@@ -1,23 +1,18 @@
-meal-planner-ga/
+Meal-Planning-using-GA/
 │
 ├── frontend/                         # React App (Vite/CRA)
 │   ├── public/
 │   ├── src/
 │   │   ├── api/
-│   │   │   ├── authApi.js
-│   │   │   ├── profileApi.js
-│   │   │   ├── recipeApi.js
-│   │   │   └── planApi.js
+│   │   │   └── ...
 │   │   │
 │   │   ├── components/
 │   │   │   ├── Navbar.jsx
-│   │   │   ├── RecipeCard.jsx
-│   │   │   └── NutritionChart.jsx
+│   │   │   └── ...
 │   │   │
 │   │   ├── pages/
 │   │   │   ├── Home.jsx
 │   │   │   ├── ProfileForm.jsx
-│   │   │   ├── Recipes.jsx
 │   │   │   ├── GeneratePlan.jsx
 │   │   │   └── PlanResult.jsx
 │   │   │
@@ -42,89 +37,53 @@ meal-planner-ga/
 │   │   │   └── security.py
 │   │   │
 │   │   ├── api/
-│   │   │   ├── v1/
-│   │   │   │   └── endpoints/
-│   │   │   │       ├── auth.py
-│   │   │   │       ├── profile.py
-│   │   │   │       ├── recipes.py
-│   │   │   │       ├── constraints.py
-│   │   │   │       └── plan.py
-│   │   │   └── deps.py
+│   │   │   ├── endpoints/
+│   │   │   │   ├── auth.py
+│   │   │   │   └── users.py
+│   │   │   ├── dependencies.py
+│   │   │   └── v1/
+│   │   │       ├── api.py
+│   │   │       ├── allergies/
+│   │   │       ├── plan/
+│   │   │       └── profile/
+│   │   │
+│   │   ├── features/
+│   │   │   └── search/               # NLP recipe search (POST /api/v1/search/nl)
+│   │   │       ├── router.py
+│   │   │       ├── schemas.py
+│   │   │       └── service.py
 │   │   │
 │   │   ├── models/
 │   │   │   ├── user.py
 │   │   │   ├── recipe.py
-│   │   │   ├── nutrition.py
-│   │   │   ├── constraints.py
-│   │   │   ├── meal_plan.py
-│   │   │   └── feedback.py
+│   │   │   └── ingredient.py
 │   │   │
 │   │   ├── schemas/
-│   │   │   ├── user.py
-│   │   │   ├── recipe.py
-│   │   │   ├── plan.py
-│   │   │   └── feedback.py
-│   │   │
-│   │   ├── services/
-│   │   │   ├── user_service.py
-│   │   │   ├── recipe_service.py
-│   │   │   ├── nutrition_service.py
-│   │   │   ├── constraint_service.py
-│   │   │   ├── plan_service.py
-│   │   │   └── queue_service.py        # Publishes GA tasks to Redis
+│   │   │   └── ...
 │   │   │
 │   │   ├── db/
 │   │   │   ├── session.py
-│   │   │   ├── base.py
-│   │   │   └── init_db.py
+│   │   │   └── ...
 │   │   │
-│   │   ├── utils/
-│   │   │   ├── fsa_score.py
-│   │   │   ├── who_score.py
-│   │   │   ├── nutrition_formulas.py
-│   │   │   └── validators.py
-│   │   │
-│   │   ├── redis_queue/
-│   │   │   ├── connection.py
-│   │   │   └── tasks.py
+│   │   ├── scripts/
+│   │   │   └── seed_recipes.py        # Seeds DB from data/raw/recipes.csv
 │   │   │
 │   │   └── __init__.py
 │   │
 │   ├── requirements.txt
 │   └── Dockerfile
 │
-├── ga-engine/                         # GA Worker that consumes Redis tasks
-│   ├── worker.py
-│   ├── ga/
-│   │   ├── population.py
-│   │   ├── fitness.py
-│   │   ├── selection.py
-│   │   ├── crossover.py
-│   │   ├── mutation.py
-│   │   └── constraints.py            # uses dataset-based health rules
-│   │
-│   ├── utils/
-│   │   ├── db_loader.py
-│   │   ├── recipe_filter.py
-│   │   └── plan_writer.py
-│   │
-│   └── requirements.txt
+├── ga-engine/                         # Legacy folder (not required for current NLP search flow)
+│   └── ...
 │
 ├── data/                              # Datasets + ingestion
-│   ├── personalized_dataset.csv
-│   ├── recipes_dataset.csv
-│   ├── ingestion/
-│   │   ├── clean_personalized_data.py
-│   │   ├── clean_recipes.py
-│   │   ├── compute_nutrition_scores.py
-│   │   ├── seed_user_constraints.py
-│   │   └── seed_recipes_db.py
+│   └── raw/
+│       └── recipes.csv
 │
 ├── docs/                              # Documentation
 │   ├── API_DOCS.md
 │   ├── DB_SCHEMA.md
 │   ├── ARCHITECTURE.md
-│   ├── GA_DESIGN.md
 │   ├── COLLAB_GUIDE.md
 │   ├── BACKEND_WORKFLOW.md
 │   └── FRONTEND_WORKFLOW.md

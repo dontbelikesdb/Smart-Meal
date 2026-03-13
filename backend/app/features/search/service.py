@@ -421,6 +421,77 @@ def _apply_text_search_terms(base_query, terms: List[str], *, require_all: bool 
     return base_query.filter(or_(*clauses))
 
 
+def _wants_vegan(query: str, parsed: ParsedQuery) -> bool:
+    q = _normalize_term(query)
+    if "vegan" in q:
+        return True
+    for t in parsed.include_terms or []:
+        if _normalize_term(str(t)) == "vegan":
+            return True
+    return False
+
+
+def _ingredient_term_clauses(term: str):
+    t = _normalize_term(term)
+    if not t:
+        return None
+    return or_(
+        Ingredient.name.ilike(t),
+        Ingredient.name.ilike(f"{t} %"),
+        Ingredient.name.ilike(f"% {t}"),
+        Ingredient.name.ilike(f"% {t} %"),
+    )
+
+
+def _exclude_ingredient_terms(base_query, terms: List[str]):
+    clauses = []
+    for term in terms:
+        c = _ingredient_term_clauses(term)
+        if c is not None:
+            clauses.append(c)
+    if not clauses:
+        return base_query
+    return base_query.filter(
+        ~Recipe.ingredients.any(
+            RecipeIngredient.ingredient.has(or_(*clauses))
+        )
+    )
+
+
+def _text_term_clauses(col, term: str):
+    t = _normalize_term(term)
+    if not t:
+        return None
+    return or_(
+        col.ilike(t),
+        col.ilike(f"{t} %"),
+        col.ilike(f"% {t}"),
+        col.ilike(f"% {t} %"),
+    )
+
+
+def _exclude_recipe_text_terms(base_query, terms: List[str]):
+    # Exclude recipes where name/description/instructions explicitly mention a forbidden term.
+    # This complements ingredient-based exclusion for datasets with incomplete ingredient parsing.
+    if not terms:
+        return base_query
+
+    cols = [Recipe.name, Recipe.description, Recipe.instructions]
+    out_clauses = []
+    for term in terms:
+        per_term = []
+        for col in cols:
+            c = _text_term_clauses(col, term)
+            if c is not None:
+                per_term.append(c)
+        if per_term:
+            out_clauses.append(or_(*per_term))
+
+    if not out_clauses:
+        return base_query
+    return base_query.filter(~or_(*out_clauses))
+
+
 def _detect_nutrition_constraints(query: str, parsed: ParsedQuery) -> Dict[str, bool]:
     q = f" { _normalize_term(query) } "
     include = { _normalize_term(t) for t in (parsed.include_terms or []) }
@@ -697,9 +768,25 @@ def _fetch_ranked_results(db_query, limit: int, terms: List[str]) -> List[Recipe
 
 def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQuery, Dict[str, Any], List[RecipeResult]]:
     parsed = parse_query(query)
+    wants_vegan = _wants_vegan(query, parsed)
 
     profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
     bmi = compute_bmi(profile)
+
+    # Apply user's dietary restrictions from profile if present
+    if profile and profile.dietary_restrictions:
+        dr = profile.dietary_restrictions
+        if isinstance(dr, str):
+            try:
+                dr = json.loads(dr)
+            except Exception:
+                dr = []
+        if isinstance(dr, list):
+            if "vegetarian" in dr and parsed.diet is None:
+                parsed.diet = DietType.VEG
+            if "vegan" in dr and parsed.diet is None:
+                parsed.diet = DietType.VEG
+                wants_vegan = True
 
     allergy_terms = _get_user_allergy_terms(db, user)
     # Merge explicit "exclude" terms from query into allergy terms.
@@ -783,6 +870,37 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
         # Diet filter
         if parsed.diet == DietType.VEG:
             q0 = q0.filter(Recipe.is_vegetarian.is_(True))
+            non_veg_terms = [
+                "egg",
+                "eggs",
+                "chicken",
+                "beef",
+                "steak",
+                "pork",
+                "mutton",
+                "lamb",
+                "fish",
+                "shrimp",
+                "prawn",
+                "bacon",
+                "ham",
+            ]
+            q0 = _exclude_ingredient_terms(q0, non_veg_terms)
+            q0 = _exclude_recipe_text_terms(q0, non_veg_terms)
+            if wants_vegan:
+                non_vegan_terms = [
+                    "milk",
+                    "dairy",
+                    "cheese",
+                    "butter",
+                    "cream",
+                    "yogurt",
+                    "paneer",
+                    "ghee",
+                    "honey",
+                ]
+                q0 = _exclude_ingredient_terms(q0, non_vegan_terms)
+                q0 = _exclude_recipe_text_terms(q0, non_vegan_terms)
         elif parsed.diet == DietType.NON_VEG:
             q0 = q0.filter(
                 (Recipe.is_vegetarian.is_(False)) | (Recipe.is_vegetarian.is_(None))

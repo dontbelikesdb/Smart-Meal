@@ -1,70 +1,134 @@
-# Meal-Planning-using-GA
-Constraint-based meal planning using Genetic Algorithms (focusing on Indian Cuisine)
-🍽️ AI-Powered Constraint-Based Meal Planning Web App
+# Meal Planning (NLP Recipe Search)
 
-Personalized nutrition planning using Genetic Algorithms (GA), Medical Guidelines, and Recipe Datasets
+Full‑stack meal planning app built around **natural‑language recipe search** and a rich recipe details experience.
 
-This project is a full-stack web application that generates personalized, health-constrained meal plans using a Genetic Algorithm engine, real nutrition data, and recipe metadata (inspired by the MealRec+ SIGIR dataset you uploaded).
+This project originally started as a GA-based meal planner, but the current implementation focuses on:
 
-✨ Built with:
+- **NLP search** over a recipe database
+- **Full‑screen recipe modal** (images, ingredient quantities, time breakdown, macros)
+- **Meal plan persistence** (Search state + Plan stored in browser)
 
-🟦 React — Modern frontend
+## Tech Stack
 
-🟥 FastAPI — Lightweight, fast Python backend
+- **Frontend:** React (Vite) + TailwindCSS
+- **Backend:** FastAPI + SQLAlchemy
+- **Database:** PostgreSQL
 
-🟨 Python GA Engine — Constraint-based GA for meal planning
+## Key Features
 
-🟩 PostgreSQL + Redis — Robust data & caching layer
+- **Natural language search** (`/api/v1/search/nl`) with ranked results.
+- **Recipe cards** that expand into a **full‑screen modal**.
+- Modal shows:
+  - image
+  - ingredient lines (**quantity + ingredient**) from the dataset
+  - prep/cook/total time
+  - description, servings, cuisine type
+  - nutrition macros (protein/carbs/fat/fiber/sugar/sodium)
+- **Plan page** stores meals in `localStorage` per user and supports:
+  - add/remove meals
+  - clear plan
+  - recipe modal on planned meals
+- **Search persistence** when navigating between Search and Plan.
 
-🐳 Docker — Full development & deployment environment
+## Local Setup
 
-🚀 Features
-🧑‍⚕️ Personalized Nutrition
+### Prerequisites
 
-User inputs: height, weight, age, activity level, medical restrictions
+- Node.js (for frontend)
+- Python 3.10+ (backend)
+- PostgreSQL running locally
 
-Dietary preferences & allergies
+### Environment Variables
 
-Auto-computed nutrition needs (BMR, TDEE, macros)
+Create a `.env` in the repo root (this file is gitignored):
 
-🧬 Genetic Algorithm Meal Planner
+```
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/meal_planner
+```
 
-Multi-objective fitness:
+Note: if your password contains special characters like `@`, it must be URL-encoded (e.g. `@` becomes `%40`).
 
-Nutrition score
+### Seed the database
 
-Medical constraints
+The backend reads recipes from `data/raw/recipes.csv` and writes them into PostgreSQL.
 
-Healthiness (FSA/WHO score)
+From `backend/`:
 
-Calorie balance
+```
+python -m app.scripts.seed_recipes --create-ingredients --backfill-ingredients --limit 2000
+```
 
-Mutation/crossover for recipe optimization
+Increase `--limit` to seed more rows (e.g. `25000`, `100000`).
 
-Supports multi-day plans
+### Run Backend
 
-🍲 Smart Recipe System
+From `backend/`:
 
-Recipe dataset ingestion (including meal-course mapping)
+```
+uvicorn app.main:app --reload --env-file ../.env
+```
 
-Nutrition analysis (calories, macros, sodium, sugar…)
+Backend base URL:
 
-FSA/WHO scoring system
+- `http://127.0.0.1:8000`
 
-📊 Interactive UI
+### Run Frontend
 
-Meal plan dashboard
+From `frontend/`:
 
-Nutrition charts
+```
+npm install
+npm run dev
+```
 
-Replace/regenerate meals
+Frontend URL is printed by Vite (commonly `http://localhost:5173`).
 
-Fully responsive
+## API Notes
 
-☁️ Ready for Deployment
+- API prefix: `/api/v1`
+- Search endpoint: `POST /api/v1/search/nl` (requires auth)
+- Swagger docs: `GET /docs`
 
-Dockerized multi-service environment
+## About `ga-engine/`
 
-CI/CD friendly
+The repository still contains a `ga-engine/` folder from earlier iterations. The current app flow does **not** require the GA worker to use search, recipe modals, or the plan UI.
 
-Works on AWS/GCP/Render/Railway
+## TestSprite MCP Setup (Windsurf)
+
+### 1) Configure MCP server
+
+File: `C:\Users\biswa\.codeium\windsurf\mcp_config.json`
+
+Use this server entry:
+
+```json
+{
+  "mcpServers": {
+    "TestSprite": {
+      "command": "npx",
+      "args": ["-y", "@testsprite/testsprite-mcp@latest", "server"],
+      "env": {
+        "API_KEY": "YOUR_TESTSPRITE_API_KEY"
+      }
+    }
+  }
+}
+```
+
+### 2) Use project config template
+
+Template file: `testsprite_tests/config.template.json`
+
+- `localEndpoint` is set to `http://127.0.0.1:8000` for this backend.
+- `backendUsername` / `backendPassword` match this project's seeded superuser.
+- Replace `executionArgs.envs.API_KEY` with your TestSprite key.
+
+### 3) Start backend before running TestSprite
+
+From `backend/`:
+
+```bash
+uvicorn app.main:app --reload --env-file ../.env
+```
+
+Then ask your IDE agent: `Help me test this project with TestSprite`.

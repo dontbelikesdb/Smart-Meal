@@ -388,6 +388,25 @@ export default function GeneratePlan() {
                       </span>
                     </div>
 
+                    {(meal.ingredientLines?.length > 0 ||
+                      meal.ingredients?.length > 0) && (
+                      <div className="mt-2 text-[11px] leading-snug text-white/75">
+                        {(meal.ingredientLines?.length > 0
+                          ? meal.ingredientLines
+                          : meal.ingredients
+                        )
+                          .slice(0, 3)
+                          .map((ing, idx) => (
+                            <div
+                              key={`${meal.id}-card-ing-${idx}`}
+                              className="truncate"
+                            >
+                              {ing}
+                            </div>
+                          ))}
+                      </div>
+                    )}
+
                     <div className="mt-2 flex items-center gap-2 text-xs text-white/70">
                       {typeof meal.prepTime === "number" && (
                         <span className="inline-flex items-center gap-2 px-2 py-1 rounded-lg bg-white/10">

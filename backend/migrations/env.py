@@ -15,8 +15,10 @@ from app.core.config import settings
 # access to the values within the .ini file in use.
 config = context.config
 
-# Override the sqlalchemy.url with the value from your .env
-config.set_main_option('sqlalchemy.url', settings.DATABASE_URL)
+# Override the sqlalchemy.url with the value from your .env.
+# Alembic's ConfigParser treats '%' as interpolation syntax, so URL-encoded
+# passwords like '%40' must be escaped before setting the option.
+config.set_main_option('sqlalchemy.url', settings.DATABASE_URL.replace('%', '%%'))
 
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:

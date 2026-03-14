@@ -12,6 +12,7 @@ class UserProfile(Base):
     height_cm = Column(Float)
     weight_kg = Column(Float)
     bmi = Column(Float)
+    activity_level = Column(String, nullable=True)
     blood_pressure_systolic = Column(Integer)
     blood_pressure_diastolic = Column(Integer)
     cholesterol_level = Column(Integer)
@@ -23,5 +24,6 @@ class UserProfile(Base):
     smoking_habit = Column(Boolean)
     dietary_habits = Column(String)  # Vegetarian, Vegan, Keto, etc.
     dietary_restrictions = Column(JSON, nullable=True, default=list)  # e.g. ["vegetarian","diabetic","pregnant"]
+    fitness_goal = Column(String, nullable=True)
     preferred_cuisine = Column(String)
     food_aversions = Column(String, nullable=True)

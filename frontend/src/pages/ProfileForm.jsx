@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { updateMe } from "../api/authApi";
 import { listAllergies } from "../api/allergiesApi";
 import {
   getMyAllergies,
@@ -8,7 +9,7 @@ import {
   setMyAllergies,
   getMyProfile,
 } from "../api/profileApi";
-import { getCurrentUser } from "../utils/auth";
+import { getCurrentUser, setCurrentUser } from "../utils/auth";
 
 export default function ProfileForm() {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export default function ProfileForm() {
   const [profileExists, setProfileExists] = useState(false);
 
   const [form, setForm] = useState({
-    name: "",
+    name: user?.full_name || "",
     age: 25,
     gender: "male",
     height_cm: 165,
@@ -60,7 +61,7 @@ export default function ProfileForm() {
 
         setForm((prev) => ({
           ...prev,
-          name: profileData.name || prev.name,
+          name: user?.full_name || prev.name,
           age: profileData.age ?? prev.age,
           gender: profileData.gender ?? prev.gender,
           height_cm: profileData.height_cm ?? prev.height_cm,
@@ -84,27 +85,7 @@ export default function ProfileForm() {
 
         setProfileExists(true);
       } catch {
-        // ignore; fall back to localStorage for legacy compatibility
-        const savedProfile = localStorage.getItem(`profile_${user.email}`);
-        if (savedProfile) {
-          const parsed = JSON.parse(savedProfile);
-          setProfileExists(true);
-          setForm({
-            ...form,
-            ...parsed,
-            allergies: Array.isArray(parsed.allergies)
-              ? parsed.allergies.join(", ")
-              : "",
-            vegetarian:
-              parsed.dietary_restrictions?.includes("vegetarian") || false,
-            diabetic:
-              parsed.dietary_restrictions?.includes("diabetic") || false,
-            pregnant:
-              parsed.dietary_restrictions?.includes("pregnant") || false,
-          });
-        } else {
-          setEditMode(true);
-        }
+        setEditMode(true);
       }
     })();
     // eslint-disable-next-line
@@ -143,11 +124,21 @@ export default function ProfileForm() {
     };
 
     try {
+      const trimmedName = String(profile.name || "").trim();
+      if (trimmedName && trimmedName !== (user?.full_name || "").trim()) {
+        const userResp = await updateMe({ full_name: trimmedName });
+        if (userResp?.data) {
+          setCurrentUser(userResp.data);
+        }
+      }
+
       await saveProfile({
         age: profile.age,
         gender: profile.gender,
         height_cm: profile.height_cm,
         weight_kg: profile.weight_kg,
+        bmi: profile.bmi ? Number(profile.bmi) : undefined,
+        activity_level: profile.activity_level,
         dietary_restrictions: profile.dietary_restrictions,
         fitness_goal: profile.fitness_goal,
       });
@@ -185,9 +176,6 @@ export default function ProfileForm() {
       if (unknown.length) {
         alert(`Unknown allergy name(s) ignored: ${unknown.join(", ")}`);
       }
-
-      localStorage.setItem(`profile_${user.email}`, JSON.stringify(profile));
-      localStorage.setItem("profileCompleted", "true");
 
       setSaved(true);
       setProfileExists(true);

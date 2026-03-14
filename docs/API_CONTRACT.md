@@ -152,7 +152,28 @@ password=Admin123!
 
 ---
 
-## 2.3 List users (admin only)
+## 2.3 Update current user
+
+**PATCH** `/api/v1/users/me`
+
+- **Auth required:** Yes
+- **Content-Type:** `application/json`
+
+### Request (`schemas.UserUpdate`)
+
+```json
+{
+  "full_name": "Updated Name"
+}
+```
+
+### Response 200
+
+`schemas.User`
+
+---
+
+## 2.4 List users (admin only)
 
 **GET** `/api/v1/users/?skip=0&limit=100`
 
@@ -164,7 +185,7 @@ Array of `schemas.User`
 
 ---
 
-## 2.4 Get user by ID
+## 2.5 Get user by ID
 
 **GET** `/api/v1/users/{user_id}`
 
@@ -204,7 +225,10 @@ Example:
 {
   "age": 23,
   "height_cm": 170,
-  "weight_kg": 70
+  "weight_kg": 70,
+  "bmi": 24.2,
+  "activity_level": "sedentary",
+  "fitness_goal": "maintain"
 }
 ```
 

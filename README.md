@@ -40,17 +40,32 @@ This project originally started as a GA-based meal planner, but the current impl
 
 ### Environment Variables
 
-Create a `.env` in the repo root (this file is gitignored):
+Create a `.env` in the repo root (this file is gitignored) by copying `.env.example`.
 
 ```
 DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/meal_planner
+TEST_DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/meal_planner_test
+SECRET_KEY=replace-with-a-long-random-secret
 ```
 
 Note: if your password contains special characters like `@`, it must be URL-encoded (e.g. `@` becomes `%40`).
 
+Important:
+
+- `DATABASE_URL` and `SECRET_KEY` are required.
+- Do not commit real secrets or API keys.
+- `FIRST_SUPERUSER_PASSWORD` should be explicitly set in your local `.env` if you want startup bootstrapping for the admin account.
+
 ### Seed the database
 
 The backend reads recipes from `data/raw/recipes.csv` and writes them into PostgreSQL.
+
+Before starting the backend, apply migrations:
+
+```
+cd backend
+alembic upgrade head
+```
 
 From `backend/`:
 
@@ -87,6 +102,7 @@ Frontend URL is printed by Vite (commonly `http://localhost:5173`).
 
 - API prefix: `/api/v1`
 - Search endpoint: `POST /api/v1/search/nl` (requires auth)
+- Current plan endpoint: `POST /api/v1/plan/generate` is still a stub
 - Swagger docs: `GET /docs`
 
 ## About `ga-engine/`

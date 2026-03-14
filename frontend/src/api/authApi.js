@@ -22,3 +22,7 @@ export const login = (email, password) => {
 export const getMe = () => {
   return axiosClient.get("/users/me");
 };
+
+export const updateMe = (payload) => {
+  return axiosClient.patch("/users/me", payload);
+};

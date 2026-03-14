@@ -1,7 +1,5 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import inspect, text
-from sqlalchemy.orm import Session
 
 from .core.config import settings
 from .core.security import get_password_hash
@@ -15,18 +13,6 @@ from .models.user import User
 # Create database tables
 _ = models
 Base.metadata.create_all(bind=engine)
-
-def _ensure_user_is_superuser_column() -> None:
-    insp = inspect(engine)
-    try:
-        cols = {c.get("name") for c in insp.get_columns("users")}
-    except Exception:
-        return
-    if "is_superuser" in cols:
-        return
-    with engine.begin() as conn:
-        conn.execute(text("ALTER TABLE users ADD COLUMN is_superuser BOOLEAN DEFAULT FALSE"))
-        conn.execute(text("UPDATE users SET is_superuser = FALSE WHERE is_superuser IS NULL"))
 
 def _ensure_first_superuser() -> None:
     email = getattr(settings, "FIRST_SUPERUSER_EMAIL", "") or ""
@@ -148,7 +134,6 @@ def _ensure_default_allergies() -> None:
     finally:
         db.close()
 
-_ensure_user_is_superuser_column()
 _ensure_first_superuser()
 _ensure_default_allergies()
 

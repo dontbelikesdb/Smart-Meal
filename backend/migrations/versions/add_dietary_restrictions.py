@@ -20,9 +20,17 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.add_column('user_profiles', sa.Column('dietary_restrictions', sa.JSON(), nullable=True, default=list))
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = {col["name"] for col in inspector.get_columns("user_profiles")}
+    if "dietary_restrictions" not in columns:
+        op.add_column('user_profiles', sa.Column('dietary_restrictions', sa.JSON(), nullable=True, default=list))
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_column('user_profiles', 'dietary_restrictions')
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = {col["name"] for col in inspector.get_columns("user_profiles")}
+    if "dietary_restrictions" in columns:
+        op.drop_column('user_profiles', 'dietary_restrictions')

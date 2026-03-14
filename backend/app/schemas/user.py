@@ -53,6 +53,8 @@ class ProfileBase(BaseModel):
     gender: Optional[str] = None
     height_cm: Optional[float] = Field(None, gt=0)
     weight_kg: Optional[float] = Field(None, gt=0)
+    bmi: Optional[float] = Field(None, gt=0)
+    activity_level: Optional[str] = None
     dietary_restrictions: Optional[List[str]] = []
     allergies: Optional[List[str]] = []
     fitness_goal: Optional[str] = None

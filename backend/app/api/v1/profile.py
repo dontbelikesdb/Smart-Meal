@@ -52,8 +52,9 @@ def get_my_profile(
         "height_cm": profile.height_cm,
         "weight_kg": profile.weight_kg,
         "bmi": profile.bmi,
+        "activity_level": profile.activity_level,
         "dietary_restrictions": profile.dietary_restrictions or [],
-        "fitness_goal": getattr(profile, "fitness_goal", None),
+        "fitness_goal": profile.fitness_goal,
     }
 
 

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api import dependencies as deps
+from app.core.allergy_catalog import get_allergy_aliases
 from app.db.session import get_db
 from app.models.allergy import Allergy
 from app.models.ingredient import Ingredient
@@ -117,9 +118,7 @@ def auto_map(
     if not name:
         raise HTTPException(status_code=400, detail="Allergy name is empty")
 
-    queries = {name}
-    if name.endswith("s") and len(name) > 3:
-        queries.add(name[:-1])
+    queries = set(get_allergy_aliases(name)) or {name}
 
     mapped_ids: set[int] = set()
     for q in sorted(queries, key=len, reverse=True):

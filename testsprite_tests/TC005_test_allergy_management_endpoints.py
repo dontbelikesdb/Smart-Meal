@@ -17,6 +17,22 @@ def test_list_allergies_authenticated(base_url: str, api_prefix: str, auth_heade
     assert "name" in body[0]
 
 
+def test_default_allergy_catalog_includes_expanded_common_ingredients(
+    base_url: str, api_prefix: str, auth_headers
+):
+    response = requests.get(
+        f"{base_url}{api_prefix}/allergies/",
+        headers=auth_headers,
+        timeout=TIMEOUT,
+    )
+    assert response.status_code == 200
+    names = {str(item.get("name", "")).strip().lower() for item in response.json()}
+    assert "fish" in names
+    assert "tomato" in names
+    assert "olive" in names
+    assert "corn" in names
+
+
 def test_get_and_set_profile_allergies(base_url: str, api_prefix: str, auth_headers):
     list_response = requests.get(
         f"{base_url}{api_prefix}/allergies/",

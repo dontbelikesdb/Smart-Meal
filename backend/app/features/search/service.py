@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.allergy_catalog import expand_allergy_terms, get_allergy_aliases
 from app.core.config import settings
 from app.models.allergy import Allergy, UserAllergy
 from app.models.ingredient import Ingredient, RecipeIngredient
@@ -67,22 +68,6 @@ _STOPWORDS: Set[str] = {
     "without",
     "option",
     "options",
-}
-
-
-_ALLERGY_QUERY_SYNONYMS: Dict[str, List[str]] = {
-    "milk": [
-        "milk",
-        "dairy",
-        "cheese",
-        "butter",
-        "cream",
-        "yogurt",
-        "paneer",
-        "curd",
-        "ghee",
-    ],
-    "peanut": ["peanut", "peanuts", "peanut butter"],
 }
 
 
@@ -614,7 +599,7 @@ def _collect_query_warnings(query: str) -> List[str]:
 def _get_mapped_ingredient_ids(db: Session, allergy_terms: Set[str], user: User) -> Set[int]:
     # Map using both:
     # - normalized user allergies via UserAllergy
-    # - ad-hoc terms (e.g. "no peanuts") matched to Allergy.name
+    # - exact allergy names provided by the caller
     allergy_ids: Set[int] = set()
 
     rows = (
@@ -668,7 +653,7 @@ def _apply_allergy_exclusions(
                 RecipeIngredient.ingredient.has(Ingredient.name.ilike(like))
             )
         )
-    return base_query
+    return _exclude_recipe_text_terms(base_query, sorted(terms))
 
 
 def _build_base_recipe_query(db: Session):
@@ -875,23 +860,21 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
                 parsed.diet = DietType.VEG
                 wants_vegan = True
 
-    allergy_terms = _get_user_allergy_terms(db, user)
-    # Merge explicit "exclude" terms from query into allergy terms.
-    allergy_terms |= {_normalize_term(t) for t in parsed.exclude_terms if t}
-    # Expand simple plural variants so "peanuts" can match ingredient "peanut".
-    expanded_allergy_terms: Set[str] = set(allergy_terms)
-    for t in list(allergy_terms):
-        if t.endswith("s") and len(t) > 3:
-            expanded_allergy_terms.add(t[:-1])
-    allergy_terms = expanded_allergy_terms
+    selected_allergy_terms = _get_user_allergy_terms(db, user)
+    explicit_exclude_terms = {_normalize_term(t) for t in parsed.exclude_terms if t}
+    allergy_terms = expand_allergy_terms(selected_allergy_terms)
+    allergy_terms |= expand_allergy_terms(
+        explicit_exclude_terms,
+        include_catalog_aliases=False,
+    )
 
-    mapped_ingredient_ids = _get_mapped_ingredient_ids(db, allergy_terms, user)
+    mapped_ingredient_ids = _get_mapped_ingredient_ids(db, selected_allergy_terms, user)
 
     q_norm = _normalize_term(query)
     q_tokens = set(re.findall(r"[a-zA-Z]{3,}", q_norm))
     warnings: List[str] = _collect_query_warnings(query)
-    for a in sorted(allergy_terms):
-        syns = _ALLERGY_QUERY_SYNONYMS.get(a, [])
+    for a in sorted(selected_allergy_terms):
+        syns = get_allergy_aliases(a)
         for s in syns:
             st = _normalize_term(s)
             if not st:
@@ -899,6 +882,7 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
             if st in q_tokens or f" {st} " in f" {q_norm} ":
                 warnings.append(f"Query seems to include '{st}' but you have selected allergy '{a}', so relevant recipes may be excluded.")
                 break
+    warnings = list(dict.fromkeys(warnings))
 
     constraints = _detect_nutrition_constraints(query, parsed)
     time_limit_minutes = _extract_time_limit_minutes(query, parsed)
@@ -908,6 +892,7 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
         "bmi": bmi,
         "bmi_cutoff": _BMI_LOW_CAL_CUTOFF,
         "default_activity": "sedentary",
+        "selected_allergies": sorted(selected_allergy_terms),
         "allergy_terms": sorted(allergy_terms),
         "mapped_ingredient_ids": sorted(mapped_ingredient_ids),
         "warnings": warnings,

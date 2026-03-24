@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 
 import { searchNL } from "../api/searchApi";
 import { getCurrentUser } from "../utils/auth";
+import VoiceSearchButton from "../voice/VoiceSearchButton";
+import useVoiceSearch from "../voice/useVoiceSearch";
 
 const _diets = [
   { label: "Keto", icon: "fa-egg", query: "keto" },
@@ -26,6 +28,19 @@ export default function GeneratePlan() {
   const [activeDiet, setActiveDiet] = useState(null);
   const [favorites, setFavorites] = useState([]);
   const [expandedMealId, setExpandedMealId] = useState(null);
+  const {
+    isSupported: voiceSupported,
+    isListening,
+    error: voiceError,
+    setError: setVoiceError,
+    toggleListening,
+  } = useVoiceSearch({
+    onTranscript: (transcript) => {
+      setQuery(transcript);
+      if (activeDiet) setActiveDiet(null);
+      handleSearch(transcript);
+    },
+  });
 
   useEffect(() => {
     if (!currentUser) {
@@ -251,17 +266,23 @@ export default function GeneratePlan() {
                 <i className="fa-solid fa-magnifying-glass" />
               </span>
               <input
-                className="w-full h-16 lg:h-20 pl-16 pr-28 rounded-2xl bg-slate-900/70 border border-white/10 shadow-xl focus:ring-2 focus:ring-brand-green focus:outline-none text-lg text-white placeholder-slate-500"
+                className="w-full h-16 lg:h-20 pl-16 pr-44 rounded-2xl bg-slate-900/70 border border-white/10 shadow-xl focus:ring-2 focus:ring-brand-green focus:outline-none text-lg text-white placeholder-slate-500"
                 placeholder="Search for dishes, e.g., low carb meals"
                 type="text"
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
+                  if (voiceError) setVoiceError("");
                   if (activeDiet) setActiveDiet(null);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleSearch();
                 }}
+              />
+              <VoiceSearchButton
+                isSupported={voiceSupported}
+                isListening={isListening}
+                onClick={toggleListening}
               />
               <button
                 type="button"
@@ -271,6 +292,27 @@ export default function GeneratePlan() {
                 {loading ? "Searching..." : "Search"}
               </button>
             </div>
+
+            {(isListening || voiceError || voiceSupported === false) && (
+              <div className="mt-3 text-sm">
+                {isListening && (
+                  <div className="bg-brand-green/15 border border-brand-green/20 text-green-100 p-3 rounded-2xl">
+                    Listening... speak the dish name or meal you want to find.
+                  </div>
+                )}
+                {!isListening && voiceError && (
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-200 p-3 rounded-2xl">
+                    {voiceError}
+                  </div>
+                )}
+                {!isListening && !voiceError && voiceSupported === false && (
+                  <div className="bg-white/5 border border-white/10 text-white/70 p-3 rounded-2xl">
+                    Voice search is available only in browsers that support the
+                    Web Speech API.
+                  </div>
+                )}
+              </div>
+            )}
 
             {warnings.length > 0 && (
               <div className="mt-4 space-y-2">

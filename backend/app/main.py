@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .core.allergy_catalog import get_allergy_aliases, get_default_allergies
 from .core.config import settings
 from .core.security import get_password_hash
 from . import models
@@ -46,41 +47,7 @@ def _ensure_default_allergies() -> None:
     if not getattr(settings, "SEED_DEFAULT_ALLERGIES", True):
         return
 
-    default_allergies: list[tuple[str, str | None]] = [
-        ("milk", "Dairy / milk proteins"),
-        ("egg", "Eggs and egg products"),
-        ("chicken", "Chicken and chicken products"),
-        ("peanut", "Peanuts and peanut products"),
-        ("tree nut", "Almonds, cashews, walnuts, etc."),
-        ("soy", "Soybeans and soy products"),
-        ("wheat", "Wheat and wheat products"),
-        ("gluten", "Gluten-containing grains"),
-        ("fish", "Fish and fish products"),
-        ("shellfish", "Shrimp, crab, lobster, etc."),
-        ("sesame", "Sesame and sesame products"),
-    ]
-
-    aliases: dict[str, list[str]] = {
-        "milk": ["milk", "dairy", "cheese", "butter", "cream", "yogurt"],
-        "egg": ["egg", "eggs"],
-        "chicken": ["chicken", "chicken breast", "chicken thighs", "chicken thigh"],
-        "peanut": ["peanut", "peanuts", "peanut butter"],
-        "tree nut": [
-            "tree nut",
-            "almond",
-            "cashew",
-            "walnut",
-            "pistachio",
-            "pecan",
-            "hazelnut",
-        ],
-        "soy": ["soy", "soya", "tofu", "edamame"],
-        "wheat": ["wheat", "flour"],
-        "gluten": ["gluten"],
-        "fish": ["fish", "salmon", "tuna"],
-        "shellfish": ["shellfish", "shrimp", "prawn", "crab", "lobster"],
-        "sesame": ["sesame", "tahini"],
-    }
+    default_allergies = get_default_allergies()
 
     limit = int(getattr(settings, "SEED_DEFAULT_ALLERGIES_AUTOMAP_LIMIT", 25) or 25)
     if limit < 1:
@@ -110,7 +77,7 @@ def _ensure_default_allergies() -> None:
                 continue
 
             mapped_ids: set[int] = set()
-            terms = aliases.get((allergy.name or "").strip().lower(), [])
+            terms = get_allergy_aliases(allergy.name or "")
             for term in sorted(set(t.strip() for t in terms if t and t.strip()), key=len, reverse=True):
                 like = f"%{term}%"
                 rows = (

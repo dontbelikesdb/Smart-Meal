@@ -51,7 +51,10 @@ export default function GeneratePlan() {
      Search logic
   -------------------------------------------------- */
   const handleSearch = async (overrideQuery) => {
-    const q = String(overrideQuery ?? query).trim();
+    const q =
+      typeof overrideQuery === "string"
+        ? overrideQuery.trim()
+        : String(query || "").trim();
     if (!q) {
       alert("Please enter what kind of meals you want");
       return;
@@ -262,7 +265,7 @@ export default function GeneratePlan() {
               />
               <button
                 type="button"
-                onClick={handleSearch}
+                onClick={() => handleSearch()}
                 className="absolute right-3 top-1/2 -translate-y-1/2 h-12 lg:h-14 px-5 rounded-xl bg-brand-green text-white font-bold shadow-btn hover:bg-green-700 transition-colors"
               >
                 {loading ? "Searching..." : "Search"}

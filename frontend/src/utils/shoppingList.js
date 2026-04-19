@@ -1,4 +1,5 @@
-const _MEAL_PLAN_PREFIX = "mealplan_";
+import { readMealPlan } from "./mealPlanStorage";
+
 const _SHOPPING_STATE_PREFIX = "shoppinglist_";
 
 const _UNITS_PATTERN =
@@ -22,16 +23,12 @@ const _safeJsonParse = (value, fallback) => {
 
 const _cleanText = (value) => String(value || "").replace(/\s+/g, " ").trim();
 
-export const getMealPlanStorageKey = (email) => `${_MEAL_PLAN_PREFIX}${email}`;
-
 export const getShoppingStateStorageKey = (email) =>
   `${_SHOPPING_STATE_PREFIX}${email}`;
 
 export const getPlanMealsForUser = (email) => {
   if (!email) return [];
-  const raw = localStorage.getItem(getMealPlanStorageKey(email));
-  const parsed = _safeJsonParse(raw, []);
-  return Array.isArray(parsed) ? parsed : [];
+  return readMealPlan(email);
 };
 
 export const getSavedShoppingState = (email) => {

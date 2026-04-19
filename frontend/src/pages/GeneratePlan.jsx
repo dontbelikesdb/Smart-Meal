@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 
 import { searchNL } from "../api/searchApi";
 import { getCurrentUser } from "../utils/auth";
+import {
+  getPlanOwnerId,
+  readMealPlan,
+  writeMealPlan,
+} from "../utils/mealPlanStorage";
 import VoiceSearchButton from "../voice/VoiceSearchButton";
 import useVoiceSearch from "../voice/useVoiceSearch";
 
@@ -48,6 +53,11 @@ export default function GeneratePlan() {
       navigate("/login", { replace: true });
     }
   }, [currentUser, navigate]);
+
+  useEffect(() => {
+    if (!getPlanOwnerId()) return;
+    setSelectedMeals(readMealPlan());
+  }, [currentUser?.email]);
 
   useEffect(() => {
     try {
@@ -137,11 +147,28 @@ export default function GeneratePlan() {
      Add / Remove meals
   -------------------------------------------------- */
   const toggleMeal = (meal) => {
-    if (selectedMeals.find((m) => m.id === meal.id)) {
-      setSelectedMeals(selectedMeals.filter((m) => m.id !== meal.id));
-    } else {
-      setSelectedMeals([...selectedMeals, meal]);
+    if (!getPlanOwnerId()) {
+      navigate("/login", { replace: true });
+      return;
     }
+
+    setSelectedMeals((prev) => {
+      const exists = prev.some((m) => m.id === meal.id);
+      const nextSelected = exists
+        ? prev.filter((m) => m.id !== meal.id)
+        : [...prev, meal];
+
+      const storedPlan = readMealPlan();
+      const storedHasMeal = storedPlan.some((m) => m.id === meal.id);
+      const nextStoredPlan = exists
+        ? storedPlan.filter((m) => m.id !== meal.id)
+        : storedHasMeal
+          ? storedPlan
+          : [...storedPlan, meal];
+
+      writeMealPlan(nextStoredPlan);
+      return nextSelected;
+    });
   };
 
   const openRecipe = (mealId) => {
@@ -169,20 +196,16 @@ export default function GeneratePlan() {
      Save (APPEND) & go to plan page 
   -------------------------------------------------- */
   const goToPlan = () => {
-    if (!currentUser?.email) {
+    if (!getPlanOwnerId()) {
       navigate("/login", { replace: true });
       return;
     }
 
-    if (selectedMeals.length === 0) {
+    const existingPlan = readMealPlan();
+    if (selectedMeals.length === 0 && existingPlan.length === 0) {
       alert("Please add at least one meal to your plan");
       return;
     }
-
-    const key = `mealplan_${currentUser.email}`;
-
-    // read existing plan
-    const existingPlan = JSON.parse(localStorage.getItem(key)) || [];
 
     // merge without duplicates
     const mergedPlan = [
@@ -192,7 +215,7 @@ export default function GeneratePlan() {
       ),
     ];
 
-    localStorage.setItem(key, JSON.stringify(mergedPlan));
+    writeMealPlan(mergedPlan);
 
     navigate("/plan");
   };
@@ -265,11 +288,12 @@ export default function GeneratePlan() {
         <section className="px-4 lg:px-8 mt-6 relative z-20">
           <div className="max-w-4xl mx-auto">
             <div className="relative group">
-              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-green transition-colors">
-                <i className="fa-solid fa-magnifying-glass" />
-              </span>
-              <input
-                className="w-full h-16 lg:h-20 pl-16 pr-60 lg:pr-72 rounded-2xl bg-slate-900/70 border border-white/10 shadow-xl focus:ring-2 focus:ring-brand-green focus:outline-none text-lg text-white placeholder-slate-500"
+              <div className="relative">
+                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-green transition-colors pointer-events-none">
+                  <i className="fa-solid fa-magnifying-glass" />
+                </span>
+                <input
+                className="w-full h-16 lg:h-20 pl-16 pr-4 sm:pr-60 lg:pr-72 rounded-2xl bg-slate-900/70 border border-white/10 shadow-xl focus:ring-2 focus:ring-brand-green focus:outline-none text-lg text-white placeholder-slate-500"
                 placeholder="Search for dishes, e.g., low carb meals"
                 type="text"
                 value={query}
@@ -282,19 +306,23 @@ export default function GeneratePlan() {
                   if (e.key === "Enter") handleSearch();
                 }}
               />
-              <VoiceSearchButton
-                isSupported={voiceSupported}
-                isListening={isListening}
-                isTranscribing={isTranscribing}
-                onClick={toggleListening}
-              />
-              <button
-                type="button"
-                onClick={() => handleSearch()}
-                className="absolute right-3 top-1/2 -translate-y-1/2 h-12 lg:h-14 min-w-[6.75rem] px-5 rounded-xl bg-brand-green text-white font-bold shadow-btn hover:bg-green-700 transition-colors"
-              >
-                {loading ? "Searching..." : "Search"}
-              </button>
+              </div>
+              <div className="mt-3 grid grid-cols-[3rem_1fr] gap-3 sm:mt-0 sm:block">
+                <VoiceSearchButton
+                  isSupported={voiceSupported}
+                  isListening={isListening}
+                  isTranscribing={isTranscribing}
+                  onClick={toggleListening}
+                  className="sm:absolute sm:right-[8.75rem] sm:top-1/2 sm:-translate-y-1/2 lg:right-[9.25rem]"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleSearch()}
+                  className="h-12 w-full rounded-xl bg-brand-green px-5 text-white font-bold shadow-btn hover:bg-green-700 transition-colors sm:absolute sm:right-3 sm:top-1/2 sm:w-auto sm:min-w-[7.25rem] sm:-translate-y-1/2 lg:h-14"
+                >
+                  {loading ? "Searching..." : "Search"}
+                </button>
+              </div>
             </div>
 
             {(isListening || isTranscribing || voiceError || voiceSupported === false) && (
@@ -762,7 +790,7 @@ export default function GeneratePlan() {
                       }`}
                     >
                       {selectedMeals.some((m) => m.id === expandedMeal.id)
-                        ? "Added to Plan"
+                        ? "Remove from Plan"
                         : "Add to Plan"}
                     </button>
                   </div>

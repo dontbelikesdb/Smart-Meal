@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { getCurrentUser } from "../utils/auth";
+import { getPlanOwnerId } from "../utils/mealPlanStorage";
 import { buildShoppingSnapshot, saveShoppingState } from "../utils/shoppingList";
 
 const _fallbackImage =
@@ -9,19 +9,19 @@ const _fallbackImage =
 
 export default function ShoppingList() {
   const navigate = useNavigate();
-  const userEmail = getCurrentUser()?.email || "";
+  const planOwnerId = getPlanOwnerId();
   const [meals, setMeals] = useState([]);
   const [items, setItems] = useState([]);
   const [checkedState, setCheckedState] = useState({});
 
   useEffect(() => {
-    if (!userEmail) {
+    if (!planOwnerId) {
       navigate("/login", { replace: true });
       return undefined;
     }
 
     const loadSnapshot = () => {
-      const snapshot = buildShoppingSnapshot(userEmail);
+      const snapshot = buildShoppingSnapshot(planOwnerId);
       setMeals(snapshot.meals);
       setItems(snapshot.items);
       setCheckedState(snapshot.checkedState);
@@ -32,7 +32,7 @@ export default function ShoppingList() {
     const handleStorage = (event) => {
       if (
         !event.key ||
-        event.key.includes(`_${userEmail}`) ||
+        event.key.includes(`_${planOwnerId}`) ||
         event.key === null
       ) {
         loadSnapshot();
@@ -46,7 +46,7 @@ export default function ShoppingList() {
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("focus", loadSnapshot);
     };
-  }, [navigate, userEmail]);
+  }, [navigate, planOwnerId]);
 
   const sortedItems = useMemo(() => {
     const rows = [...items];
@@ -66,7 +66,7 @@ export default function ShoppingList() {
 
   const updateCheckedState = (nextState) => {
     setCheckedState(nextState);
-    saveShoppingState(userEmail, nextState);
+    saveShoppingState(planOwnerId, nextState);
   };
 
   const toggleItem = (key) => {

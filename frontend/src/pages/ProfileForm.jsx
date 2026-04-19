@@ -412,9 +412,9 @@ export default function ProfileForm() {
         </Card>
 
         <Card label="Body Mass Index (BMI)">
-          <div className="flex gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <input
-              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none text-white"
+              className="w-full min-w-0 bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none text-white"
               value={form.bmi}
               readOnly
               placeholder="BMI"
@@ -422,7 +422,7 @@ export default function ProfileForm() {
             <button
               type="button"
               onClick={calculateBMI}
-              className="bg-brand-green text-white px-5 rounded-xl font-bold hover:bg-green-700 transition-colors"
+              className="w-full bg-brand-green text-white px-5 py-3 rounded-xl font-bold hover:bg-green-700 transition-colors"
             >
               Calculate
             </button>

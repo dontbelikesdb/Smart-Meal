@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { getCurrentUser } from "../utils/auth";
+import {
+  clearMealPlan,
+  getPlanOwnerId,
+  readMealPlan,
+  writeMealPlan,
+} from "../utils/mealPlanStorage";
 
 const _fallbackImage =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuDu7F1GZildoPkQwlmkdCrVYHPKjK5xrJ1P7I88EPD4jgKyV7EL8wCH2-q-UzBOb4HZfVWXqOssKBorvvmaR-pB_Et6QZcfchxNhMUDt7mRB8uew2CwYiGFnnrvdOUe7la1ezB7OgmdSmv9du81bCB_fdfIb-uo0PYV-4AUbB9WhVCHtKDeIo51DidymHAZgwdihPQoSwOTHoKfb56NJ5jmFJ9e00TqKt44AgUq2aOORYlbn49DlzmGgBJEdZ57ci9ZPOYlejxvfRZ3";
@@ -16,7 +21,7 @@ const _getMealImage = (meal) =>
 
 export default function PlanResult() {
   const navigate = useNavigate();
-  const userEmail = getCurrentUser()?.email || "";
+  const planOwnerId = getPlanOwnerId();
   const [meals, setMeals] = useState([]);
   const [expandedMealId, setExpandedMealId] = useState(null);
 
@@ -24,17 +29,13 @@ export default function PlanResult() {
      Load plan
   ----------------------------------------- */
   useEffect(() => {
-    if (!userEmail) {
+    if (!planOwnerId) {
       navigate("/login");
       return;
     }
 
-    const stored = localStorage.getItem(`mealplan_${userEmail}`);
-
-    if (stored) {
-      setMeals(JSON.parse(stored));
-    }
-  }, [userEmail, navigate]);
+    setMeals(readMealPlan(planOwnerId));
+  }, [planOwnerId, navigate]);
 
   /* -----------------------------------------
      Remove single meal
@@ -43,7 +44,7 @@ export default function PlanResult() {
     const updated = meals.filter((m) => m.id !== id);
     setMeals(updated);
 
-    localStorage.setItem(`mealplan_${userEmail}`, JSON.stringify(updated));
+    writeMealPlan(updated, planOwnerId);
   };
 
   /* -----------------------------------------
@@ -53,7 +54,7 @@ export default function PlanResult() {
     if (!window.confirm("Clear your entire meal plan?")) return;
 
     setMeals([]);
-    localStorage.removeItem(`mealplan_${userEmail}`);
+    clearMealPlan(planOwnerId);
   };
 
   const openRecipe = (mealId) => {

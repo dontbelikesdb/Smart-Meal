@@ -1,0 +1,551 @@
+{
+  "nodes": [
+    {
+      "id": "readme_meal_planner_app",
+      "label": "Meal Planner Application",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_nlp_search",
+      "label": "Natural Language Recipe Search",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_ga_engine",
+      "label": "Genetic Algorithm Engine (Legacy)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_meal_plan_persistence",
+      "label": "Meal Plan Persistence (localStorage)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_fastapi_backend",
+      "label": "FastAPI Backend",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_react_frontend",
+      "label": "React Vite Frontend",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_postgresql",
+      "label": "PostgreSQL Database",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_testsprite_mcp",
+      "label": "TestSprite MCP Integration",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "api_auth_login",
+      "label": "Auth Login Endpoint (JWT)",
+      "file_type": "document",
+      "source_file": "docs/API_CONTRACT.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "api_users",
+      "label": "Users API (CRUD)",
+      "file_type": "document",
+      "source_file": "docs/API_CONTRACT.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "api_profile",
+      "label": "Profile API (Health Metrics + Allergies)",
+      "file_type": "document",
+      "source_file": "docs/API_CONTRACT.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "api_allergies",
+      "label": "Allergies + Ingredient Mapping API",
+      "file_type": "document",
+      "source_file": "docs/API_CONTRACT.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "api_search_nl",
+      "label": "Natural Language Search Endpoint (POST /api/v1/search/nl)",
+      "file_type": "document",
+      "source_file": "docs/API_CONTRACT.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "api_plan_generate",
+      "label": "Plan Generate Stub Endpoint",
+      "file_type": "document",
+      "source_file": "docs/API_CONTRACT.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "api_bearer_token",
+      "label": "Bearer Token Authentication (OAuth2)",
+      "file_type": "document",
+      "source_file": "docs/API_CONTRACT.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "requirements_fastapi",
+      "label": "FastAPI Framework Dependency",
+      "file_type": "code",
+      "source_file": "backend/requirements.txt",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "requirements_sqlalchemy",
+      "label": "SQLAlchemy ORM Dependency",
+      "file_type": "code",
+      "source_file": "backend/requirements.txt",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "requirements_google_genai",
+      "label": "Google GenAI SDK Dependency",
+      "file_type": "code",
+      "source_file": "backend/requirements.txt",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "requirements_redis_rq",
+      "label": "Redis + RQ Task Queue Dependency",
+      "file_type": "code",
+      "source_file": "backend/requirements.txt",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "frontend_index_html",
+      "label": "Frontend Entry HTML (Vite PWA)",
+      "file_type": "code",
+      "source_file": "frontend/index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "frontend_pwa_manifest",
+      "label": "PWA Web Manifest",
+      "file_type": "code",
+      "source_file": "frontend/index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "testsprite_api_tests",
+      "label": "TestSprite API Test Suite",
+      "file_type": "document",
+      "source_file": "testsprite_tests/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "testsprite_conftest",
+      "label": "TestSprite Conftest Auth Fixtures",
+      "file_type": "document",
+      "source_file": "testsprite_tests/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "readme_meal_planner_app",
+      "target": "readme_nlp_search",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_meal_planner_app",
+      "target": "readme_fastapi_backend",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_meal_planner_app",
+      "target": "readme_react_frontend",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_meal_planner_app",
+      "target": "readme_postgresql",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_meal_planner_app",
+      "target": "readme_ga_engine",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_meal_planner_app",
+      "target": "readme_meal_plan_persistence",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_meal_planner_app",
+      "target": "readme_testsprite_mcp",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_ga_engine",
+      "target": "readme_nlp_search",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 0.85
+    },
+    {
+      "source": "api_auth_login",
+      "target": "api_bearer_token",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/API_CONTRACT.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "api_search_nl",
+      "target": "api_bearer_token",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/API_CONTRACT.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "api_profile",
+      "target": "api_allergies",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/API_CONTRACT.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "api_search_nl",
+      "target": "api_allergies",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/API_CONTRACT.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "api_search_nl",
+      "target": "api_profile",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/API_CONTRACT.md",
+      "source_location": null,
+      "weight": 0.85
+    },
+    {
+      "source": "api_plan_generate",
+      "target": "api_search_nl",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "docs/API_CONTRACT.md",
+      "source_location": null,
+      "weight": 0.75
+    },
+    {
+      "source": "requirements_fastapi",
+      "target": "readme_fastapi_backend",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/requirements.txt",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "requirements_sqlalchemy",
+      "target": "readme_postgresql",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "backend/requirements.txt",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "requirements_google_genai",
+      "target": "readme_nlp_search",
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/requirements.txt",
+      "source_location": null,
+      "weight": 0.8
+    },
+    {
+      "source": "requirements_redis_rq",
+      "target": "api_plan_generate",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.7,
+      "source_file": "backend/requirements.txt",
+      "source_location": null,
+      "weight": 0.7
+    },
+    {
+      "source": "frontend_index_html",
+      "target": "readme_react_frontend",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/index.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_index_html",
+      "target": "frontend_pwa_manifest",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/index.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "testsprite_api_tests",
+      "target": "api_auth_login",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "testsprite_tests/README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "testsprite_api_tests",
+      "target": "readme_fastapi_backend",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "testsprite_tests/README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "testsprite_conftest",
+      "target": "testsprite_api_tests",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "testsprite_tests/README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_testsprite_mcp",
+      "target": "testsprite_api_tests",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "readme_nlp_search",
+      "target": "api_search_nl",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 0.95
+    },
+    {
+      "source": "readme_meal_plan_persistence",
+      "target": "api_plan_generate",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 0.8
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "full_stack_architecture",
+      "label": "Full-Stack Meal Planner Architecture",
+      "nodes": [
+        "readme_react_frontend",
+        "readme_fastapi_backend",
+        "readme_postgresql",
+        "requirements_redis_rq"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "README.md"
+    },
+    {
+      "id": "search_pipeline",
+      "label": "NLP Recipe Search Pipeline",
+      "nodes": [
+        "api_search_nl",
+        "api_profile",
+        "api_allergies",
+        "requirements_google_genai"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/API_CONTRACT.md"
+    }
+  ],
+  "input_tokens": 2500,
+  "output_tokens": 800
+}

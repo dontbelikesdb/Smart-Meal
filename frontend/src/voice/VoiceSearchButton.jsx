@@ -3,6 +3,7 @@ export default function VoiceSearchButton({
   isListening,
   isTranscribing,
   onClick,
+  className = "",
 }) {
   const isBusy = isListening || isTranscribing;
 
@@ -29,7 +30,7 @@ export default function VoiceSearchButton({
               : "Start voice search"
           : "Voice search is not supported in this browser"
       }
-      className={`absolute right-[8.25rem] lg:right-[9rem] top-1/2 -translate-y-1/2 h-12 w-12 rounded-xl border transition-colors z-10 ${
+      className={`h-12 w-12 shrink-0 rounded-xl border transition-colors z-10 ${className} ${
         !isSupported
           ? "cursor-not-allowed border-white/5 bg-white/5 text-white/30"
           : isTranscribing

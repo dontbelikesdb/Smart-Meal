@@ -20,5 +20,27 @@ Thumbs.db
 # Data
 data/raw/recipes.csv
 
-# TestSprite generated runtime artifacts (can include temporary credentials)
-testsprite_tests/tmp/
+# TestSprite
+testsprite_tests/
+
+# AI Coding Assistant Meta
+.claude/
+.gemini/
+CLAUDE.md
+GEMINI.md
+
+# Graphify
+graphify-out/
+.graphify_python
+.graphify_detect.json
+.graphify_ast.json
+.graphify_cache_check.py
+.graphify_cached.json
+.graphify_uncached.txt
+.graphify_semantic_new.json
+.graphify_semantic.json
+.graphify_analysis.json
+.graphify_labels.json
+.graphify_extract.json
+.graphify_incremental.json
+.graphifyignore

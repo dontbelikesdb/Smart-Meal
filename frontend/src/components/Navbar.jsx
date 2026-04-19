@@ -12,6 +12,7 @@ export default function Navbar() {
     location.pathname === "/generate" ||
     location.pathname === "/profile" ||
     location.pathname === "/plan" ||
+    location.pathname === "/shopping" ||
     location.pathname === "/login" ||
     location.pathname === "/signup";
 
@@ -32,7 +33,7 @@ export default function Navbar() {
           : "bg-white border-t border-gray-200"
       }`}
     >
-      <div className="grid grid-cols-5 h-16 max-w-md mx-auto">
+      <div className="grid grid-cols-6 h-16 max-w-md mx-auto">
         <Link
           to="/"
           className={`flex flex-col items-center justify-center transition-colors ${
@@ -71,6 +72,16 @@ export default function Navbar() {
         >
           <i className="fa-solid fa-calendar-days text-xl mb-1" />
           <span className="text-[10px] font-medium">Plan</span>
+        </Link>
+
+        <Link
+          to={gatedPath("/shopping")}
+          className={`flex flex-col items-center justify-center transition-colors ${
+            isDarkNav ? "hover:bg-white/5" : "hover:bg-gray-50"
+          } ${isActive("/shopping")}`}
+        >
+          <i className="fa-solid fa-cart-shopping text-xl mb-1" />
+          <span className="text-[10px] font-medium">Shopping</span>
         </Link>
 
         {token ? (

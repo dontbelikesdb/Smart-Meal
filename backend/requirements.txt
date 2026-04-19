@@ -12,3 +12,5 @@ passlib
 python-multipart
 python-dotenv
 google-genai
+openai
+faster-whisper

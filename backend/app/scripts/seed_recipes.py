@@ -51,6 +51,70 @@ _NON_VEG_REGEXES = [
     re.compile(r"\bgelatin\b", re.IGNORECASE),
 ]
 
+_GLUTEN_KEYWORDS = {
+    "all purpose flour",
+    "all-purpose flour",
+    "barley",
+    "bread flour",
+    "bulgur",
+    "couscous",
+    "durum",
+    "farina",
+    "flour",
+    "gluten",
+    "malt",
+    "rye",
+    "seitan",
+    "semolina",
+    "spelt",
+    "wheat",
+    "wheat flour",
+}
+
+_GLUTEN_FREE_POSITIVE_REGEXES = [
+    re.compile(r"\bgluten[-\s]?free\b", re.IGNORECASE),
+    re.compile(r"\bceliac[-\s]?friendly\b", re.IGNORECASE),
+    re.compile(r"\bcoeliac[-\s]?friendly\b", re.IGNORECASE),
+]
+
+_GLUTEN_REGEXES = [
+    re.compile(r"\b(?:" + "|".join(sorted(map(re.escape, _GLUTEN_KEYWORDS), key=len, reverse=True)) + r")\b", re.IGNORECASE),
+]
+
+_GLUTEN_RISK_RECIPE_REGEX = re.compile(
+    r"\b(?:bread|breadcrumb|breaded|pasta|noodle|cake|cookie|shortbread|pudding|pastry|dough|cracker|biscuit|bun|roll|muffin|pizza)\b",
+    re.IGNORECASE,
+)
+
+_LOW_GLUTEN_RISK_RECIPE_REGEX = re.compile(
+    r"\b(?:cornbread|corn bread|rice bread|buckwheat bread|gluten[-\s]?free)\b",
+    re.IGNORECASE,
+)
+
+_DAIRY_KEYWORDS = {
+    "butter",
+    "buttermilk",
+    "casein",
+    "cheese",
+    "cream",
+    "curd",
+    "dairy",
+    "ghee",
+    "milk",
+    "paneer",
+    "whey",
+    "yogurt",
+    "yoghurt",
+}
+
+_DAIRY_FREE_POSITIVE_REGEXES = [
+    re.compile(r"\bdairy[-\s]?free\b", re.IGNORECASE),
+]
+
+_DAIRY_REGEXES = [
+    re.compile(r"\b(?:" + "|".join(sorted(map(re.escape, _DAIRY_KEYWORDS), key=len, reverse=True)) + r")\b", re.IGNORECASE),
+]
+
 _CUISINE_HINTS: list[tuple[str, CuisineType]] = [
     ("indian", CuisineType.INDIAN),
     ("italian", CuisineType.ITALIAN),
@@ -143,6 +207,69 @@ def _classify_is_vegetarian(
     return not _is_non_veg_text(hay)
 
 
+def _classify_free_from(
+    *,
+    positive_regexes: list[re.Pattern],
+    allergen_regexes: list[re.Pattern],
+    name: str,
+    category: str,
+    keywords: str,
+    ingredient_parts: list[str],
+) -> bool:
+    descriptive_text = " ".join([name, category, keywords]).lower()
+    if any(rx.search(descriptive_text) for rx in positive_regexes):
+        return True
+
+    ingredient_text = " ".join(ingredient_parts).lower()
+    if not ingredient_text:
+        return False
+    if len(ingredient_text.strip()) < 3:
+        return False
+    return not any(rx.search(ingredient_text) for rx in allergen_regexes)
+
+
+def _classify_is_gluten_free(
+    *,
+    name: str,
+    category: str,
+    keywords: str,
+    ingredient_parts: list[str],
+) -> bool:
+    descriptive_text = " ".join([name, category, keywords]).lower()
+    if (
+        _GLUTEN_RISK_RECIPE_REGEX.search(descriptive_text)
+        and not _LOW_GLUTEN_RISK_RECIPE_REGEX.search(descriptive_text)
+        and not any(rx.search(descriptive_text) for rx in _GLUTEN_FREE_POSITIVE_REGEXES)
+    ):
+        return False
+
+    return _classify_free_from(
+        positive_regexes=_GLUTEN_FREE_POSITIVE_REGEXES,
+        allergen_regexes=_GLUTEN_REGEXES,
+        name=name,
+        category=category,
+        keywords=keywords,
+        ingredient_parts=ingredient_parts,
+    )
+
+
+def _classify_is_dairy_free(
+    *,
+    name: str,
+    category: str,
+    keywords: str,
+    ingredient_parts: list[str],
+) -> bool:
+    return _classify_free_from(
+        positive_regexes=_DAIRY_FREE_POSITIVE_REGEXES,
+        allergen_regexes=_DAIRY_REGEXES,
+        name=name,
+        category=category,
+        keywords=keywords,
+        ingredient_parts=ingredient_parts,
+    )
+
+
 def _iter_rows(csv_path: Path) -> Iterable[dict[str, str]]:
     csv.field_size_limit(2**31 - 1)
     with csv_path.open("r", encoding="utf-8", newline="") as f:
@@ -184,11 +311,14 @@ def seed_recipes(
     *,
     csv_path: Path,
     limit: int,
+    skip_rows: int,
     create_ingredients: bool,
     backfill_nutrition: bool,
     backfill_ingredients: bool,
     backfill_diet: bool,
+    backfill_images: bool,
     commit_every: int,
+    progress_every: int,
 ) -> None:
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
@@ -199,14 +329,28 @@ def seed_recipes(
         nutrition_upserts = 0
         ingredient_links = 0
         diet_updates = 0
+        image_updates = 0
         ops = 0
         seen = 0
+        skipped = 0
 
         for row in _iter_rows(csv_path):
+            if skipped < skip_rows:
+                skipped += 1
+                continue
+
             if limit and seen >= limit:
                 break
 
             seen += 1
+            if progress_every and seen % progress_every == 0:
+                print(
+                    f"Progress: skipped={skipped}, seen={seen}, inserted={inserted}, "
+                    f"ingredient_links={ingredient_links}, nutrition_upserts={nutrition_upserts}, "
+                    f"diet_updates={diet_updates}, image_updates={image_updates}",
+                    flush=True,
+                )
+
             rid = row.get("RecipeId")
             if not rid:
                 continue
@@ -217,7 +361,12 @@ def seed_recipes(
                 continue
 
             existing = db.get(Recipe, recipe_id)
-            if existing is not None and not (backfill_nutrition or backfill_ingredients or backfill_diet):
+            if existing is not None and not (
+                backfill_nutrition
+                or backfill_ingredients
+                or backfill_diet
+                or backfill_images
+            ):
                 continue
 
             name = (row.get("Name") or "").strip()
@@ -250,6 +399,18 @@ def seed_recipes(
                 keywords=keywords,
                 ingredient_parts=ingredient_parts,
             )
+            is_gluten_free = _classify_is_gluten_free(
+                name=name,
+                category=category,
+                keywords=keywords,
+                ingredient_parts=ingredient_parts,
+            )
+            is_dairy_free = _classify_is_dairy_free(
+                name=name,
+                category=category,
+                keywords=keywords,
+                ingredient_parts=ingredient_parts,
+            )
 
             recipe = existing
             if recipe is None:
@@ -264,8 +425,8 @@ def seed_recipes(
                     cuisine_type=cuisine_type,
                     is_vegetarian=is_vegetarian,
                     is_vegan=False,
-                    is_gluten_free=False,
-                    is_dairy_free=False,
+                    is_gluten_free=is_gluten_free,
+                    is_dairy_free=is_dairy_free,
                     image_url=image_url,
                 )
                 db.add(recipe)
@@ -276,6 +437,19 @@ def seed_recipes(
                     recipe.is_vegetarian = is_vegetarian
                     diet_updates += 1
                     ops += 1
+                if recipe.is_gluten_free != is_gluten_free:
+                    recipe.is_gluten_free = is_gluten_free
+                    diet_updates += 1
+                    ops += 1
+                if recipe.is_dairy_free != is_dairy_free:
+                    recipe.is_dairy_free = is_dairy_free
+                    diet_updates += 1
+                    ops += 1
+
+            if recipe is not None and backfill_images and image_url and not recipe.image_url:
+                recipe.image_url = image_url
+                image_updates += 1
+                ops += 1
 
             calories = _safe_float(row.get("Calories"))
             protein = _safe_float(row.get("ProteinContent"))
@@ -363,9 +537,9 @@ def seed_recipes(
 
         db.commit()
         print(
-            f"Seed complete. Seen rows: {seen}, inserted recipes: {inserted}, "
+            f"Seed complete. Skipped rows: {skipped}, seen rows: {seen}, inserted recipes: {inserted}, "
             f"nutrition upserts: {nutrition_upserts}, ingredient links: {ingredient_links}, "
-            f"diet updates: {diet_updates}"
+            f"diet updates: {diet_updates}, image updates: {image_updates}"
         )
 
     finally:
@@ -380,11 +554,14 @@ def main() -> None:
         default=str(Path(__file__).resolve().parents[3] / "data" / "raw" / "recipes.csv"),
     )
     parser.add_argument("--limit", type=int, default=2000)
+    parser.add_argument("--skip", type=int, default=0)
     parser.add_argument("--create-ingredients", action="store_true")
     parser.add_argument("--backfill-nutrition", action="store_true")
     parser.add_argument("--backfill-ingredients", action="store_true")
     parser.add_argument("--backfill-diet", action="store_true")
+    parser.add_argument("--backfill-images", action="store_true")
     parser.add_argument("--commit-every", type=int, default=250)
+    parser.add_argument("--progress-every", type=int, default=1000)
     args = parser.parse_args()
 
     csv_path = Path(args.csv_path)
@@ -394,11 +571,14 @@ def main() -> None:
     seed_recipes(
         csv_path=csv_path,
         limit=args.limit,
+        skip_rows=max(0, args.skip),
         create_ingredients=args.create_ingredients,
         backfill_nutrition=bool(args.backfill_nutrition),
         backfill_ingredients=bool(args.backfill_ingredients),
         backfill_diet=bool(args.backfill_diet),
+        backfill_images=bool(args.backfill_images),
         commit_every=args.commit_every,
+        progress_every=max(0, args.progress_every),
     )
 
 

@@ -29,6 +29,17 @@ class Settings(BaseSettings):
     # Gemini (LLM)
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-1.5-flash"
+
+    # OpenAI speech-to-text
+    OPENAI_API_KEY: str = ""
+    OPENAI_TRANSCRIPTION_MODEL: str = "gpt-4o-mini-transcribe"
+
+    # Local speech-to-text
+    LOCAL_TRANSCRIPTION_MODEL: str = "small"
+    LOCAL_TRANSCRIPTION_COMPUTE_TYPE: str = "int8"
+    LOCAL_TRANSCRIPTION_LANGUAGE: str = "en"
+    LOCAL_TRANSCRIPTION_BEAM_SIZE: int = 5
+    LOCAL_TRANSCRIPTION_VAD_FILTER: bool = False
     
     # First superuser
     FIRST_SUPERUSER_EMAIL: str = "admin@example.com"

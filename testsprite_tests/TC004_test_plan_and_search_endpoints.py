@@ -76,6 +76,41 @@ def test_search_nl_low_sodium_and_low_sugar_constraints(
     assert nutrition.get("low_sugar") is True
 
 
+def test_search_nl_high_sugar_drinks_constraint(
+    base_url: str, api_prefix: str, auth_headers
+):
+    payload = {"query": "high sugary drinks", "limit": 5}
+    response = requests.post(
+        f"{base_url}{api_prefix}/search/nl",
+        json=payload,
+        headers=auth_headers,
+        timeout=TIMEOUT,
+    )
+    assert response.status_code == 200
+    body = response.json()
+    nutrition = body.get("applied", {}).get("nutrition", {})
+    assert nutrition.get("high_sugar") is True
+    assert "drinks" in body.get("applied", {}).get("search_terms", [])
+
+
+def test_search_nl_gluten_free_bread_constraint(
+    base_url: str, api_prefix: str, auth_headers
+):
+    payload = {"query": "gluten free bread", "limit": 5}
+    response = requests.post(
+        f"{base_url}{api_prefix}/search/nl",
+        json=payload,
+        headers=auth_headers,
+        timeout=TIMEOUT,
+    )
+    assert response.status_code == 200
+    body = response.json()
+    nutrition = body.get("applied", {}).get("nutrition", {})
+    assert nutrition.get("gluten_free") is True
+    assert "bread" in body.get("applied", {}).get("search_terms", [])
+    assert "gluten" not in body.get("applied", {}).get("search_terms", [])
+
+
 def test_search_nl_warns_for_unsupported_budget_query(
     base_url: str, api_prefix: str, auth_headers
 ):

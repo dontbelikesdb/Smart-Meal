@@ -31,6 +31,7 @@ _LOW_CARB_MAX_G = 30.0
 _HIGH_FIBER_MIN_G = 8.0
 _LOW_SODIUM_MAX_MG = 500.0
 _LOW_SUGAR_MAX_G = 10.0
+_HIGH_SUGAR_MIN_G = 20.0
 
 _UNSUPPORTED_QUERY_HINTS: Dict[str, str] = {
     "budget": "Budget-aware filtering is not supported yet.",
@@ -566,6 +567,30 @@ def _detect_nutrition_constraints(query: str, parsed: ParsedQuery) -> Dict[str, 
         or "low sugar" in include
         or "sugar free" in include
     )
+    wants_high_sugar = (
+        " high sugar " in q
+        or " high-sugar " in q
+        or " sugary " in q
+        or " surgary " in q
+        or " sugar rich " in q
+        or " sugar-rich " in q
+        or " sweetened " in q
+        or "high sugar" in include
+        or "sugary" in include
+        or ("sugar" in include and "high" in include)
+    )
+    wants_gluten_free = (
+        " gluten free " in q
+        or " gluten-free " in q
+        or " celiac " in q
+        or " coeliac " in q
+        or " celiac friendly " in q
+        or " coeliac friendly " in q
+        or "gluten free" in include
+        or "gluten-free" in include
+        or "celiac" in include
+        or "coeliac" in include
+    )
 
     # If multiple constraints are present, prefer AND matching.
     active_constraints = [
@@ -574,6 +599,8 @@ def _detect_nutrition_constraints(query: str, parsed: ParsedQuery) -> Dict[str, 
         wants_high_fiber,
         wants_low_sodium,
         wants_low_sugar,
+        wants_high_sugar,
+        wants_gluten_free,
     ]
     require_all_text_terms = sum(1 for c in active_constraints if c) > 1
 
@@ -583,6 +610,8 @@ def _detect_nutrition_constraints(query: str, parsed: ParsedQuery) -> Dict[str, 
         "high_fiber": wants_high_fiber,
         "low_sodium": wants_low_sodium,
         "low_sugar": wants_low_sugar,
+        "high_sugar": wants_high_sugar,
+        "gluten_free": wants_gluten_free,
         "require_all_text_terms": require_all_text_terms,
     }
 
@@ -759,8 +788,8 @@ def _fetch_ranked_results(db_query, limit: int, terms: List[str]) -> List[Recipe
     if not terms:
         return _fetch_results(db_query, limit)
 
-    fetch_limit = max(limit * 10, 50)
-    fetch_limit = min(fetch_limit, 250)
+    fetch_limit = max(limit * 50, 500)
+    fetch_limit = min(fetch_limit, 2000)
 
     rows = db_query.limit(fetch_limit).all()
     scored: List[Tuple[int, int, int, int, Recipe, Optional[RecipeNutritionalInfo]]] = []
@@ -902,11 +931,14 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
             "high_fiber": bool(constraints.get("high_fiber")),
             "low_sodium": bool(constraints.get("low_sodium")),
             "low_sugar": bool(constraints.get("low_sugar")),
+            "high_sugar": bool(constraints.get("high_sugar")),
+            "gluten_free": bool(constraints.get("gluten_free")),
             "high_protein_min_g": _HIGH_PROTEIN_MIN_G,
             "low_carb_max_g": _LOW_CARB_MAX_G,
             "high_fiber_min_g": _HIGH_FIBER_MIN_G,
             "low_sodium_max_mg": _LOW_SODIUM_MAX_MG,
             "low_sugar_max_g": _LOW_SUGAR_MAX_G,
+            "high_sugar_min_g": _HIGH_SUGAR_MIN_G,
         },
         "time_max_minutes": time_limit_minutes,
     }
@@ -928,6 +960,18 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
         search_terms = [t for t in search_terms if t not in {"sodium", "salt", "heart", "healthy", "hypertension"}]
     if constraints.get("low_sugar"):
         search_terms = [t for t in search_terms if t not in {"sugar", "diabetic", "blood"}]
+    if constraints.get("high_sugar"):
+        search_terms = [
+            t
+            for t in search_terms
+            if t not in {"sugar", "sugary", "surgary", "sweet", "sweetened"}
+        ]
+    if constraints.get("gluten_free"):
+        search_terms = [
+            t
+            for t in search_terms
+            if t not in {"gluten", "free", "glutenfree", "celiac", "coeliac"}
+        ]
     if time_limit_minutes is not None:
         search_terms = [t for t in search_terms if t not in {"minute", "minutes", "mins", "quick"}]
 
@@ -954,6 +998,8 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
         high_fiber: bool = False,
         low_sodium: bool = False,
         low_sugar: bool = False,
+        high_sugar: bool = False,
+        gluten_free: bool = False,
         require_all_text_terms: bool = False,
     ) -> List[RecipeResult]:
         q0 = _build_base_recipe_query(db)
@@ -1014,6 +1060,25 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
             q0 = q0.filter(RecipeNutritionalInfo.sodium_mg <= _LOW_SODIUM_MAX_MG)
         if low_sugar:
             q0 = q0.filter(RecipeNutritionalInfo.sugar_g <= _LOW_SUGAR_MAX_G)
+        if high_sugar:
+            q0 = q0.filter(RecipeNutritionalInfo.sugar_g >= _HIGH_SUGAR_MIN_G)
+        if gluten_free:
+            q0 = q0.filter(Recipe.is_gluten_free.is_(True))
+            gluten_ingredient_terms = [
+                "wheat",
+                "gluten",
+                "barley",
+                "rye",
+                "malt",
+                "all-purpose flour",
+                "bread flour",
+                "wheat flour",
+            ]
+            q0 = _exclude_ingredient_terms(q0, gluten_ingredient_terms)
+            q0 = _exclude_recipe_text_terms(
+                q0,
+                ["all-purpose flour", "bread flour", "wheat flour"],
+            )
         if time_limit_minutes is not None:
             q0 = q0.filter(
                 ((Recipe.prep_time + Recipe.cook_time) <= time_limit_minutes)
@@ -1038,34 +1103,39 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
 
     # When user asks for multiple constraints like "high protein low carb", prefer
     # matching BOTH first, then gracefully relax.
-    attempts: List[Tuple[bool, bool, bool, bool, bool, bool, str]] = []
+    attempts: List[Tuple[bool, bool, bool, bool, bool, bool, bool, bool, str]] = []
     wants_hp = bool(constraints.get("high_protein"))
     wants_lc = bool(constraints.get("low_carb"))
     wants_hf = bool(constraints.get("high_fiber"))
     wants_lsod = bool(constraints.get("low_sodium"))
     wants_lsug = bool(constraints.get("low_sugar"))
+    wants_hsug = bool(constraints.get("high_sugar"))
+    wants_gf = bool(constraints.get("gluten_free"))
     wants_all = bool(constraints.get("require_all_text_terms"))
-    requested_count = sum(1 for c in [wants_hp, wants_lc, wants_hf, wants_lsod, wants_lsug] if c)
+    requested_count = sum(1 for c in [wants_hp, wants_lc, wants_hf, wants_lsod, wants_lsug, wants_hsug, wants_gf] if c)
     if requested_count:
-        attempts.append((wants_hp, wants_lc, wants_hf, wants_lsod, wants_lsug, wants_all, "all_requested"))
+        attempts.append((wants_hp, wants_lc, wants_hf, wants_lsod, wants_lsug, wants_hsug, wants_gf, wants_all, "all_requested"))
         if requested_count > 1:
             if wants_hp:
-                attempts.append((True, False, False, False, False, False, "high_protein_only"))
+                attempts.append((True, False, False, False, False, False, False, False, "high_protein_only"))
             if wants_lc:
-                attempts.append((False, True, False, False, False, False, "low_carb_only"))
+                attempts.append((False, True, False, False, False, False, False, False, "low_carb_only"))
             if wants_hf:
-                attempts.append((False, False, True, False, False, False, "high_fiber_only"))
+                attempts.append((False, False, True, False, False, False, False, False, "high_fiber_only"))
             if wants_lsod:
-                attempts.append((False, False, False, True, False, False, "low_sodium_only"))
+                attempts.append((False, False, False, True, False, False, False, False, "low_sodium_only"))
             if wants_lsug:
-                attempts.append((False, False, False, False, True, False, "low_sugar_only"))
-        attempts.append((False, False, False, False, False, False, "no_nutrition"))
+                attempts.append((False, False, False, False, True, False, False, False, "low_sugar_only"))
+            if wants_hsug:
+                attempts.append((False, False, False, False, False, True, False, False, "high_sugar_only"))
+            if wants_gf:
+                attempts.append((False, False, False, False, False, False, True, False, "gluten_free_only"))
     else:
-        attempts.append((False, False, False, False, False, False, "no_nutrition"))
+        attempts.append((False, False, False, False, False, False, False, False, "no_nutrition"))
 
     used_attempt: Optional[str] = None
 
-    for hp, lc, hf, lsod, lsug, req_all, label in attempts:
+    for hp, lc, hf, lsod, lsug, hsug, gf, req_all, label in attempts:
         if len(results) >= limit:
             break
 
@@ -1079,6 +1149,8 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
                     high_fiber=hf,
                     low_sodium=lsod,
                     low_sugar=lsug,
+                    high_sugar=hsug,
+                    gluten_free=gf,
                     require_all_text_terms=req_all,
                 ):
                     if r.id in seen:
@@ -1094,6 +1166,10 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
                         r.reasons.append("constraint=low_sodium")
                     if lsug:
                         r.reasons.append("constraint=low_sugar")
+                    if hsug:
+                        r.reasons.append("constraint=high_sugar")
+                    if gf:
+                        r.reasons.append("constraint=gluten_free")
                     if time_limit_minutes is not None:
                         r.reasons.append(f"constraint=max_time_{time_limit_minutes}m")
                     if bmi is not None and bmi > _BMI_LOW_CAL_CUTOFF and not parsed.wants_high_calorie:
@@ -1114,6 +1190,8 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
                 high_fiber=hf,
                 low_sodium=lsod,
                 low_sugar=lsug,
+                high_sugar=hsug,
+                gluten_free=gf,
                 require_all_text_terms=req_all,
             ):
                 if r.id in seen:
@@ -1128,6 +1206,10 @@ def search_nl(db: Session, user: User, query: str, limit: int) -> Tuple[ParsedQu
                     r.reasons.append("constraint=low_sodium")
                 if lsug:
                     r.reasons.append("constraint=low_sugar")
+                if hsug:
+                    r.reasons.append("constraint=high_sugar")
+                if gf:
+                    r.reasons.append("constraint=gluten_free")
                 if time_limit_minutes is not None:
                     r.reasons.append(f"constraint=max_time_{time_limit_minutes}m")
                 if label != "no_nutrition":

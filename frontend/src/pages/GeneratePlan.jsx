@@ -31,6 +31,7 @@ export default function GeneratePlan() {
   const {
     isSupported: voiceSupported,
     isListening,
+    isTranscribing,
     error: voiceError,
     setError: setVoiceError,
     toggleListening,
@@ -208,6 +209,8 @@ export default function GeneratePlan() {
       return { label: "Low Carb", cls: "bg-green-500/90" };
     if (text.includes("high protein"))
       return { label: "High Protein", cls: "bg-orange-500/90" };
+    if (text.includes("high sugar"))
+      return { label: "High Sugar", cls: "bg-pink-500/90" };
     if (text.includes("vegetarian"))
       return { label: "Vegetarian", cls: "bg-blue-500/90" };
     if (text.includes("vegan"))
@@ -266,7 +269,7 @@ export default function GeneratePlan() {
                 <i className="fa-solid fa-magnifying-glass" />
               </span>
               <input
-                className="w-full h-16 lg:h-20 pl-16 pr-44 rounded-2xl bg-slate-900/70 border border-white/10 shadow-xl focus:ring-2 focus:ring-brand-green focus:outline-none text-lg text-white placeholder-slate-500"
+                className="w-full h-16 lg:h-20 pl-16 pr-60 lg:pr-72 rounded-2xl bg-slate-900/70 border border-white/10 shadow-xl focus:ring-2 focus:ring-brand-green focus:outline-none text-lg text-white placeholder-slate-500"
                 placeholder="Search for dishes, e.g., low carb meals"
                 type="text"
                 value={query}
@@ -282,22 +285,28 @@ export default function GeneratePlan() {
               <VoiceSearchButton
                 isSupported={voiceSupported}
                 isListening={isListening}
+                isTranscribing={isTranscribing}
                 onClick={toggleListening}
               />
               <button
                 type="button"
                 onClick={() => handleSearch()}
-                className="absolute right-3 top-1/2 -translate-y-1/2 h-12 lg:h-14 px-5 rounded-xl bg-brand-green text-white font-bold shadow-btn hover:bg-green-700 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-12 lg:h-14 min-w-[6.75rem] px-5 rounded-xl bg-brand-green text-white font-bold shadow-btn hover:bg-green-700 transition-colors"
               >
                 {loading ? "Searching..." : "Search"}
               </button>
             </div>
 
-            {(isListening || voiceError || voiceSupported === false) && (
+            {(isListening || isTranscribing || voiceError || voiceSupported === false) && (
               <div className="mt-3 text-sm">
                 {isListening && (
                   <div className="bg-brand-green/15 border border-brand-green/20 text-green-100 p-3 rounded-2xl">
-                    Listening... speak the dish name or meal you want to find.
+                    Recording... click the mic again when you finish speaking.
+                  </div>
+                )}
+                {!isListening && isTranscribing && (
+                  <div className="bg-blue-500/10 border border-blue-500/20 text-blue-100 p-3 rounded-2xl">
+                    Transcribing your voice search...
                   </div>
                 )}
                 {!isListening && voiceError && (

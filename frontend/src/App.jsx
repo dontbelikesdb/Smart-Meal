@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import ProfileForm from "./pages/ProfileForm";
 import GeneratePlan from "./pages/GeneratePlan";
 import PlanResult from "./pages/PlanResult";
+import ShoppingList from "./pages/ShoppingList";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 
@@ -91,6 +92,17 @@ export default function App() {
               <Private>
                 <PageWrapper>
                   <PlanResult />
+                </PageWrapper>
+              </Private>
+            }
+          />
+
+          <Route
+            path="/shopping"
+            element={
+              <Private>
+                <PageWrapper>
+                  <ShoppingList />
                 </PageWrapper>
               </Private>
             }

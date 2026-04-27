@@ -20,6 +20,9 @@ Thumbs.db
 # Data
 data/raw/recipes.csv
 
+# Legacy GA Engine
+ga-engine/
+
 # TestSprite
 testsprite_tests/
 

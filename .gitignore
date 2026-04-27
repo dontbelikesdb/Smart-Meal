@@ -47,3 +47,14 @@ graphify-out/
 .graphify_extract.json
 .graphify_incremental.json
 .graphifyignore
+
+# Docs & Reports
+docs/
+scratch/
+*.png
+*_Report.md
+*_Report_*.md
+SmartMeal_Project_Report.md
+Project Structure
+Git Collaboration Guide
+implementation_plan.md

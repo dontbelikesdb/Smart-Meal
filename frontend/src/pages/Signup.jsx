@@ -23,10 +23,16 @@ export default function Signup() {
       alert("Account created successfully! Please login.");
       navigate("/login");
     } catch (e) {
-      const msg =
-        e?.response?.data?.detail ||
-        e?.message ||
-        "Signup failed";
+      let msg = "Signup failed";
+      if (e?.response?.data?.detail) {
+        if (Array.isArray(e.response.data.detail)) {
+          msg = e.response.data.detail[0]?.msg;
+        } else {
+          msg = e.response.data.detail;
+        }
+      } else if (e?.message) {
+        msg = e.message;
+      }
       setError(String(msg));
     }
   };
@@ -85,6 +91,9 @@ export default function Signup() {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             autoComplete="new-password"
           />
+          <p className="text-white/40 text-xs px-2 -mt-2">
+            Password must be at least 8 characters long, contain 1 uppercase letter, and 1 number.
+          </p>
 
           {error && (
             <div className="text-red-200 text-sm bg-red-500/10 border border-red-500/20 p-3 rounded-2xl">
